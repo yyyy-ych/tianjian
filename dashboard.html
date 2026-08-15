@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>天鉴数链 · 数据大屏</title>
+<style>
+:root{
+  --bg:#0d1f18; --bg-2:#102820; --panel:#142b21; --panel-2:#162f25;
+  --line:#20402f; --line-2:#284d39;
+  --ink:#eaf3ec; --ink-2:#b7cbbf; --ink-3:#7f9a8c;
+  --green:#3fa37d; --green-bright:#4fc08d; --gold:#d9b45a; --gold-deep:#c39b3a;
+  --success:#4fc08d; --warning:#d9b45a; --danger:#e0705a; --info:#6fb3d9;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0; font-family:var(--sans); color:var(--ink); background:var(--bg);
+  line-height:1.55; font-size:14px; -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 420px at 50% -8%,rgba(63,163,125,.14) 0%,rgba(63,163,125,0) 60%);
+  min-height:100vh;
+}
+
+/* 顶栏 */
+.topbar{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,31,24,.86);backdrop-filter:blur(8px);z-index:10;}
+.topbar .brand{display:flex;align-items:center;gap:12px;}
+.topbar .logo{width:38px;height:38px;}
+.topbar .t{margin:0;font-size:16px;font-weight:700;letter-spacing:.5px;}
+.topbar .t small{display:block;font-size:11px;font-weight:500;color:var(--ink-3);letter-spacing:.3px;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);}
+.live .dot{width:8px;height:8px;border-radius:50%;background:var(--green-bright);box-shadow:0 0 0 0 rgba(79,192,141,.5);animation:pulse 2s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,192,141,.5);}70%{box-shadow:0 0 0 7px rgba(79,192,141,0);}100%{box-shadow:0 0 0 0 rgba(79,192,141,0);}}
+.btn-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;font-weight:600;color:#0d1f18;background:var(--green-bright);padding:8px 15px;border-radius:9px;transition:background .15s ease,transform .15s ease;}
+.btn-link:hover{background:#63d6a5;}
+.btn-link:active{transform:translateY(1px);}
+.btn-link svg{width:15px;height:15px;}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3fa37d,#d9b45a);display:grid;place-items:center;font-size:14px;font-weight:700;color:#0d1f18;}
+
+/* 布局 */
+.main{max-width:1400px;margin:0 auto;padding:20px 24px 44px;display:grid;grid-template-columns:repeat(12,1fr);gap:16px;}
+
+/* 指标卡 */
+.metrics{grid-column:1 / -1;display:grid;grid-template-columns:repeat(5,1fr);gap:16px;}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;}
+.metric::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);opacity:0;transition:opacity .2s ease;}
+.metric:hover::before{opacity:1;}
+.metric .l{font-size:12.5px;color:var(--ink-2);}
+.metric .n{font-size:28px;font-weight:700;margin-top:6px;letter-spacing:.5px;font-variant-numeric:tabular-nums;}
+.metric .n .u{font-size:14px;font-weight:600;color:var(--ink-3);margin-left:3px;}
+.metric .delta{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;margin-top:8px;padding:2px 8px;border-radius:999px;}
+.delta.up{color:var(--success);background:rgba(79,192,141,.12);}
+.delta.flat{color:var(--gold);background:rgba(217,180,90,.12);}
+.delta svg{width:12px;height:12px;}
+
+/* 面板 */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-width:0;}
+.panel h2{margin:0 0 6px;font-size:15px;font-weight:700;color:var(--ink);}
+.panel .sub{margin:0 0 16px;font-size:12px;color:var(--ink-3);}
+.panel-trend{grid-column:span 8;}
+.panel-pie{grid-column:span 4;}
+.panel-table{grid-column:span 8;}
+.panel-alerts{grid-column:span 4;}
+
+/* 图表 */
+.chart{width:100%;}
+.chart svg{width:100%;height:auto;display:block;}
+
+/* 饼图图例 */
+.legend{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+.legend-item{display:flex;align-items:center;gap:10px;font-size:13px;}
+.legend-item .sw{width:11px;height:11px;border-radius:3px;flex:none;}
+.legend-item .name{color:var(--ink-2);}
+.legend-item .val{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums;}
+.legend-item .pct{color:var(--ink-3);font-size:12px;width:40px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* 告警 */
+.alert-list{display:flex;flex-direction:column;gap:10px;}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);}
+.alert svg{width:17px;height:17px;flex:none;margin-top:1px;}
+.alert .a-t{font-size:13px;font-weight:600;color:var(--ink);}
+.alert .a-d{font-size:12px;color:var(--ink-2);margin-top:2px;}
+.alert.warning svg{color:var(--warning);}
+.alert.danger svg{color:var(--danger);}
+.alert.info svg{color:var(--info);}
+
+/* 表格 */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+th{font-size:11.5px;color:var(--ink-3);font-weight:600;letter-spacing:.4px;}
+td{color:var(--ink-2);}
+td:first-child{color:var(--ink);font-weight:600;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;}
+td .hash{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--ink-3);}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.tag.sold{color:var(--success);background:rgba(79,192,141,.12);}
+.tag.growing{color:var(--gold);background:rgba(217,180,90,.12);}
+.tag.processing{color:var(--info);background:rgba(111,179,217,.12);}
+.num{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);}
+
+@media (max-width:1080px){
+  .metrics{grid-template-columns:repeat(3,1fr);}
+  .panel-trend,.panel-pie,.panel-table,.panel-alerts{grid-column:1 / -1;}
+}
+@media (max-width:640px){
+  .metrics{grid-template-columns:1fr 1fr;}
+  .main{padding:14px 14px 32px;}
+  .topbar{padding:12px 14px;}
+  .topbar-right .clock{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <img class="logo" src="assets/logo.svg" alt="天鉴数链"/>
+    <div class="t">天鉴数链 · 数据大屏<small>道地药材溯源与数字赋能平台 · 管理端</small></div>
+  </div>
+  <div class="topbar-right">
+    <span class="live"><span class="dot"></span><span class="clock" id="clock">—</span></span>
+    <a class="btn-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      扫码预览
+    </a>
+    <div class="avatar">管</div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- 指标卡 -->
+  <section class="metrics">
+    <div class="metric"><div class="l">培育新农人</div><div class="n">83<span class="u">名</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>12.5% 本季度</span></div>
+    <div class="metric"><div class="l">示范基地面积</div><div class="n">196<span class="u">亩</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>8.2% 本年</span></div>
+    <div class="metric"><div class="l">上链存证数据</div><div class="n">13.1<span class="u">万条</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>21.4% 本月</span></div>
+    <div class="metric"><div class="l">亩均溢价增收</div><div class="n">18<span class="u">%</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>3.6% 同比</span></div>
+    <div class="metric"><div class="l">部署成本占比</div><div class="n">1/5</div><span class="delta flat">较传统方案</span></div>
+  </section>
+
+  <!-- 扫码趋势折线 -->
+  <section class="panel panel-trend">
+    <h2>扫码溯源趋势</h2>
+    <p class="sub">近 30 天消费者扫码验证次数</p>
+    <div class="chart" id="trendChart"></div>
+  </section>
+
+  <!-- 品种分布饼图 -->
+  <section class="panel panel-pie">
+    <h2>溯源品种分布</h2>
+    <p class="sub">道地药材溯源批次占比</p>
+    <div class="chart" id="pieChart"></div>
+    <div class="legend" id="pieLegend"></div>
+  </section>
+
+  <!-- 批次二维码列表 -->
+  <section class="panel panel-table">
+    <h2>批次与二维码</h2>
+    <p class="sub">种植批次溯源状态总览</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>批次号</th><th>品种</th><th>产地</th><th>状态</th><th>扫码次数</th><th>链上存证哈希</th></tr></thead>
+        <tbody id="batchBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 实时告警 -->
+  <section class="panel panel-alerts">
+    <h2>实时防伪告警</h2>
+    <p class="sub">异常扫码与伪造风险检测</p>
+    <div class="alert-list" id="alertList"></div>
+  </section>
+
+</main>
+
+<script>
+/* ===== mock 数据 ===== */
+var ALERTS = [
+  { level: "danger", title: "签名校验失败", desc: "批次 0177 · SM2 验签不通过，疑似伪造二维码" },
+  { level: "warning", title: "同码多城市扫码", desc: "批次 0305 · 温州/杭州双城触发，疑似复制" },
+  { level: "danger", title: "高频扫码异常", desc: "批次 0218 · 24 小时内 231 次，超过阈值" },
+  { level: "info", title: "二维码即将过期", desc: "批次 0092 · 有效期剩余 7 天，请及时续期" }
+];
+var BATCHES = [
+  { id: "DEMO-001", herb: "铁皮石斛", origin: "温州·雁荡山", status: "sold", scans: 128, hash: "9c4f8e2a…b8d0e1" },
+  { id: "BATCH-0305", herb: "浙贝母", origin: "金华·磐安", status: "growing", scans: 3421, hash: "5b7e1c4d…2a9f6c" },
+  { id: "BATCH-0218", herb: "铁皮石斛", origin: "温州·雁荡山", status: "processing", scans: 1204, hash: "d2a8f1b3…7e0c9b" },
+  { id: "BATCH-0177", herb: "杭白菊", origin: "嘉兴·桐乡", status: "sold", scans: 88, hash: "f6c0e9a2…1d4b8e" },
+  { id: "BATCH-0092", herb: "温郁金", origin: "温州·瑞安", status: "growing", scans: 45, hash: "3b9d7e5c…8a1f0d" }
+];
+var TREND = [1240,1310,1288,1462,1510,1498,1632,1754,1710,1842,1920,1888,2015,2140,2086,2230,2315,2264,2410,2532,2478,2640,2785,2712,2890,3045,3120,3268,3420,3610];
+var VARIETIES = [
+  { name: "铁皮石斛", val: 58, color: "#3fa37d" },
+  { name: "浙贝母", val: 24, color: "#d9b45a" },
+  { name: "其他品种", val: 18, color: "#4c6358" }
+];
+
+/* ===== 顶栏时间 ===== */
+function pad(n){ return (n<10?'0':'')+n; }
+function tickClock(){
+  var d = new Date();
+  document.getElementById('clock').textContent =
+    d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
+tickClock(); setInterval(tickClock, 1000);
+
+/* ===== 扫码趋势折线（手写 SVG） ===== */
+(function(){
+  var s = TREND, W = 720, H = 240, L = 44, R = 12, T = 14, B = 28;
+  var xs = function(i){ return L + (W-L-R) * i / (s.length-1); };
+  var max = Math.max.apply(null, s), min = Math.min.apply(null, s);
+  var y = function(v){ return T + (H-T-B) * (1 - (v-min)/(max-min)); };
+  var pts = s.map(function(v,i){ return xs(i).toFixed(1)+','+y(v).toFixed(1); }).join(' ');
+  var area = L+','+(H-B)+' '+pts+' '+(W-R)+','+(H-B);
+
+  var grid = '';
+  for (var g = 0; g <= 4; g++){
+    var gy = T + (H-T-B) * g / 4;
+    var label = Math.round(max - (max-min) * g / 4);
+    grid += '<line x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'" stroke="#20402f" stroke-width="1"/>'
+      + '<text x="'+(L-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#7f9a8c">'+label+'</text>';
+  }
+  // 日期轴标签（每 7 天）
+  var days = ['07-15','07-22','07-29','08-05','08-13'];
+  days.forEach(function(d, i){
+    var ix = L + (W-L-R) * i / (days.length-1);
+    grid += '<text x="'+ix.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="#7f9a8c">'+d+'</text>';
+  });
+
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="扫码溯源趋势">'
+    + grid
+    + '<polygon points="'+area+'" fill="rgba(63,163,125,.14)"/>'
+    + '<polyline points="'+pts+'" fill="none" stroke="#3fa37d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="'+xs(s.length-1).toFixed(1)+'" cy="'+y(s[s.length-1]).toFixed(1)+'" r="4" fill="#4fc08d" stroke="#0d1f18" stroke-width="2"/>'
+    + '</svg>';
+  document.getElementById('trendChart').innerHTML = svg;
+})();
+
+/* ===== 品种分布环形图（手写 SVG） ===== */
+(function(){
+  var data = VARIETIES, W = 220, H = 220, cx = W/2, cy = H/2, r = 82, sw = 30;
+  var total = data.reduce(function(a,b){ return a+b.val; }, 0);
+  var angle = -Math.PI/2, segs = '';
+  data.forEach(function(d){
+    var frac = d.val / total;
+    var a2 = angle + frac * Math.PI * 2;
+    var large = (frac > 0.5) ? 1 : 0;
+    var x1 = cx + r*Math.cos(angle), y1 = cy + r*Math.sin(angle);
+    var x2 = cx + r*Math.cos(a2), y2 = cy + r*Math.sin(a2);
+    segs += '<path d="M '+cx+' '+cy+' L '+x1.toFixed(2)+' '+y1.toFixed(2)+' A '+r+' '+r+' 0 '+large+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+' Z" fill="'+d.color+'"/>';
+    angle = a2;
+  });
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="品种分布">'
+    + segs
+    + '<circle cx="'+cx+'" cy="'+cy+'" r="'+(r-sw)+'" fill="#142b21"/>'
+    + '<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="30" font-weight="700" fill="#eaf3ec">'+total+'</text>'
+    + '<text x="'+cx+'" y="'+(cy+18)+'" text-anchor="middle" font-size="12" fill="#7f9a8c">溯源批次</text>'
+    + '</svg>';
+  document.getElementById('pieChart').innerHTML = svg;
+
+  var legend = '';
+  data.forEach(function(d){
+    legend += '<div class="legend-item"><span class="sw" style="background:'+d.color+'"></span>'
+      + '<span class="name">'+d.name+'</span><span class="val">'+d.val+'</span><span class="pct">'+d.val+'%</span></div>';
+  });
+  document.getElementById('pieLegend').innerHTML = legend;
+})();
+
+/* ===== 批次列表 ===== */
+(function(){
+  var tagMap = { sold: ['sold','已采收'], growing: ['growing','种植中'], processing: ['processing','加工中'] };
+  var html = '';
+  BATCHES.forEach(function(b){
+    var t = tagMap[b.status];
+    html += '<tr><td>'+b.id+'</td><td>'+b.herb+'</td><td>'+b.origin+'</td>'
+      + '<td><span class="tag '+t[0]+'">'+t[1]+'</span></td>'
+      + '<td><span class="num">'+b.scans.toLocaleString()+'</span></td>'
+      + '<td><span class="hash">'+b.hash+'</span></td></tr>';
+  });
+  document.getElementById('batchBody').innerHTML = html;
+})();
+
+/* ===== 告警列表 ===== */
+(function(){
+  var icons = {
+    danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
+  var html = '';
+  ALERTS.forEach(function(a){
+    html += '<div class="alert '+a.level+'">'+icons[a.level]
+      + '<div><div class="a-t">'+a.title+'</div><div class="a-d">'+a.desc+'</div></div></div>';
+  });
+  document.getElementById('alertList').innerHTML = html;
+})();
+</script>
+</body>
+</html>

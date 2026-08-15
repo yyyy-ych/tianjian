@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="天鉴数链">
+  <defs>
+    <linearGradient id="tjSeal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13503b"/>
+      <stop offset="1" stop-color="#0b6e4f"/>
+    </linearGradient>
+  </defs>
+  <circle cx="36" cy="36" r="34" fill="url(#tjSeal)"/>
+  <circle cx="36" cy="36" r="30.5" fill="none" stroke="#c9a227" stroke-width="1.6"/>
+  <circle cx="36" cy="36" r="27" fill="none" stroke="#c9a227" stroke-width="0.8" opacity="0.55"/>
+  <text x="36" y="47" text-anchor="middle" font-family="'Songti SC','STSong','SimSun',serif" font-size="34" font-weight="600" fill="#f6f4ee">鉴</text>
+</svg>
