@@ -1,25 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-天鉴数链 · 演示二维码生成脚本
+天鉴数链 演示二维码生成脚本
 用法：
-    python generate_qr.py "https://你的真实链接/verify?batch=DEMO-001"
-不带参数时使用占位生产域名 demo.tianjian.cn。
-生成 300dpi、25mm、纠错级别 M、白底、中央含平台印章 Logo 的 PNG。
+    python generate_qr.py "https://你的真实链接"
+不带参数默认使用域名 https://www.tianjianshulian.xyz/
+生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
+每次生成新二维码的同时，自动将 data.json 中的扫码访问次数重置归零。
 依赖：pip install qrcode[pil]
 """
 import sys
 import os
+import json
 
 try:
     import qrcode
-    from qrcode.constants import ERROR_CORRECT_M
+    from qrcode.constants import ERROR_CORRECT_H
     from PIL import Image, ImageDraw, ImageFont
 except ImportError:
     print("缺少依赖，请先执行：pip install qrcode[pil]")
     sys.exit(1)
 
-DEFAULT_URL = "https://demo.tianjian.cn/verify?batch=DEMO-001"
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qrcode-demo.png")
+DEFAULT_URL = "https://www.tianjianshulian.xyz/"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(BASE_DIR, "qrcode-demo.png")
+DATA_FILE = os.path.join(BASE_DIR, "data.json")
 
 # 目标尺寸：25mm @ 300dpi ≈ 295px
 MM = 25
@@ -45,7 +49,7 @@ def find_cjk_font():
 
 def make_logo(px):
     """绘制中央印章 Logo：深绿圆 + 金色双环 + 「鉴」字。"""
-    size = int(px * 0.24)  # 占二维码约 24% 的中央 logo
+    size = int(px * 0.18)  # 占二维码约 18% 的中央 logo
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     pad = size * 0.06
@@ -73,31 +77,35 @@ def make_logo(px):
     return img
 
 
+def reset_scan_count():
+    if not os.path.exists(DATA_FILE):
+        print("警告：data.json 不存在，跳过扫码次数重置")
+        return
+    try:
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        data['scan_count'] = 0
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print("已重置 data.json 扫码次数 → 0")
+    except Exception as e:
+        print("重置扫码次数失败：", e)
+
+
 def main():
     url = sys.argv[1].strip() if len(sys.argv) > 1 else DEFAULT_URL
     print("二维码内容：", url)
 
-    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_M, border=4, box_size=1)
+    reset_scan_count()
+
+    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
     qr.add_data(url)
     qr.make(fit=True)
+    base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
 
-    modules = qr.modules_count
-    matrix = qr.get_matrix()
-
-    # 逐模块绘制，得到整像素级控制（后续可精确缩放）
-    base = Image.new("RGB", (modules, modules), "white")
-    px = base.load()
-    for y in range(modules):
-        for x in range(modules):
-            if matrix[y][x]:
-                px[x, y] = (0, 0, 0)
-
-    # 缩放到目标尺寸（最近邻，保持模块锐利）
     base = base.resize((TARGET_PX, TARGET_PX), Image.NEAREST)
 
-    # 叠加中央 Logo
     logo = make_logo(TARGET_PX)
-    base = base.convert("RGBA")
     pos = ((TARGET_PX - logo.size[0]) // 2, (TARGET_PX - logo.size[1]) // 2)
     base.paste(logo, pos, logo)
 

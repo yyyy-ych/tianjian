@@ -116,7 +116,12 @@ td .hash{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--
 
 <header class="topbar">
   <div class="brand">
-    <img class="logo" src="assets/logo.svg" alt="天鉴数链"/>
+    <svg class="logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="天鉴数链">
+      <circle cx="32" cy="32" r="30" fill="#fff"/>
+      <circle cx="32" cy="32" r="24" fill="#13503b"/>
+      <circle cx="32" cy="32" r="20" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+      <text x="32" y="39" text-anchor="middle" font-family="Songti SC,SimSun,serif" font-size="22" font-weight="700" fill="#f6f4ee">鉴</text>
+    </svg>
     <div class="t">天鉴数链 · 数据大屏<small>道地药材溯源与数字赋能平台 · 管理端</small></div>
   </div>
   <div class="topbar-right">
@@ -137,7 +142,7 @@ td .hash{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--
     <div class="metric"><div class="l">示范基地面积</div><div class="n">196<span class="u">亩</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>8.2% 本年</span></div>
     <div class="metric"><div class="l">上链存证数据</div><div class="n">13.1<span class="u">万条</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>21.4% 本月</span></div>
     <div class="metric"><div class="l">亩均溢价增收</div><div class="n">18<span class="u">%</span></div><span class="delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>3.6% 同比</span></div>
-    <div class="metric"><div class="l">部署成本占比</div><div class="n">1/5</div><span class="delta flat">较传统方案</span></div>
+    <div class="metric"><div class="l">扫码总数</div><div class="n" id="metricScans">0<span class="u">次</span></div><span class="delta flat">实时统计</span></div>
   </section>
 
   <!-- 扫码趋势折线 -->
@@ -185,7 +190,7 @@ var ALERTS = [
   { level: "info", title: "二维码即将过期", desc: "批次 0092 · 有效期剩余 7 天，请及时续期" }
 ];
 var BATCHES = [
-  { id: "DEMO-001", herb: "铁皮石斛", origin: "温州·雁荡山", status: "sold", scans: 128, hash: "9c4f8e2a…b8d0e1" },
+  { id: "DEMO-001", herb: "铁皮石斛", origin: "温州·雁荡山", status: "sold", scans: 0, hash: "9c4f8e2a…b8d0e1" },
   { id: "BATCH-0305", herb: "浙贝母", origin: "金华·磐安", status: "growing", scans: 3421, hash: "5b7e1c4d…2a9f6c" },
   { id: "BATCH-0218", herb: "铁皮石斛", origin: "温州·雁荡山", status: "processing", scans: 1204, hash: "d2a8f1b3…7e0c9b" },
   { id: "BATCH-0177", herb: "杭白菊", origin: "嘉兴·桐乡", status: "sold", scans: 88, hash: "f6c0e9a2…1d4b8e" },
@@ -223,7 +228,6 @@ tickClock(); setInterval(tickClock, 1000);
     grid += '<line x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'" stroke="#20402f" stroke-width="1"/>'
       + '<text x="'+(L-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#7f9a8c">'+label+'</text>';
   }
-  // 日期轴标签（每 7 天）
   var days = ['07-15','07-22','07-29','08-05','08-13'];
   days.forEach(function(d, i){
     var ix = L + (W-L-R) * i / (days.length-1);
@@ -269,20 +273,6 @@ tickClock(); setInterval(tickClock, 1000);
   document.getElementById('pieLegend').innerHTML = legend;
 })();
 
-/* ===== 批次列表 ===== */
-(function(){
-  var tagMap = { sold: ['sold','已采收'], growing: ['growing','种植中'], processing: ['processing','加工中'] };
-  var html = '';
-  BATCHES.forEach(function(b){
-    var t = tagMap[b.status];
-    html += '<tr><td>'+b.id+'</td><td>'+b.herb+'</td><td>'+b.origin+'</td>'
-      + '<td><span class="tag '+t[0]+'">'+t[1]+'</span></td>'
-      + '<td><span class="num">'+b.scans.toLocaleString()+'</span></td>'
-      + '<td><span class="hash">'+b.hash+'</span></td></tr>';
-  });
-  document.getElementById('batchBody').innerHTML = html;
-})();
-
 /* ===== 告警列表 ===== */
 (function(){
   var icons = {
@@ -297,6 +287,65 @@ tickClock(); setInterval(tickClock, 1000);
   });
   document.getElementById('alertList').innerHTML = html;
 })();
+
+/* ===== 渲染批次列表 ===== */
+function renderBatches(){
+  var tagMap = { sold: ['sold','已采收'], growing: ['growing','种植中'], processing: ['processing','加工中'] };
+  var html = '';
+  BATCHES.forEach(function(b){
+    var t = tagMap[b.status];
+    html += '<tr><td>'+b.id+'</td><td>'+b.herb+'</td><td>'+b.origin+'</td>'
+      + '<td><span class="tag '+t[0]+'">'+t[1]+'</span></td>'
+      + '<td><span class="num">'+b.scans.toLocaleString()+'</span></td>'
+      + '<td><span class="hash">'+b.hash+'</span></td></tr>';
+  });
+  document.getElementById('batchBody').innerHTML = html;
+}
+
+/* ===== 从 API 读取扫码统计，回退静态 data.json（Vercel 兼容） ===== */
+function loadData(){
+  renderBatches();
+
+  fetch('/api/data', { cache: 'no-store' })
+    .then(function(res){
+      if(!res.ok) throw new Error('api error');
+      return res.json();
+    })
+    .then(function(data){ applyData(data); })
+    .catch(function(){
+      fetch('data.json', { cache: 'no-store' })
+        .then(function(res){
+          if(!res.ok) throw new Error('data.json not found');
+          return res.json();
+        })
+        .then(function(data){ applyData(data); })
+        .catch(function(){
+          try {
+            var cached = JSON.parse(localStorage.getItem('trace_data_cache') || 'null');
+            if(cached && typeof cached.scan_count === 'number'){
+              applyData(cached);
+            }
+          } catch(e){}
+        });
+    });
+}
+
+function applyData(data){
+  var scans = data.scan_count || 0;
+  for(var i = 0; i < BATCHES.length; i++){
+    if(BATCHES[i].id === data.batch_id){
+      BATCHES[i].scans = scans;
+      break;
+    }
+  }
+  renderBatches();
+  var metric = document.getElementById('metricScans');
+  if(metric){
+    metric.innerHTML = scans.toLocaleString() + '<span class="u">次</span>';
+  }
+}
+
+loadData();
 </script>
 </body>
 </html>

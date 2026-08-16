@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>天鉴数链 · 本草兴乡 — 溯源验证</title>
+<title>天鉴数链 — 溯源验证</title>
 <style>
 :root{
   --bg:#f6f4ee; --card:#ffffff; --ink:#1f2a24; --ink-2:#46564c; --ink-3:#6d7a71;
@@ -20,47 +20,171 @@ body{
   margin:0; font-family:var(--sans); color:var(--ink); background:var(--bg);
   line-height:1.6; font-size:15px; -webkit-font-smoothing:antialiased;
   background-image:radial-gradient(1200px 500px at 50% -10%,#eef4ee 0%,rgba(238,244,238,0) 60%);
+  overflow-x:hidden;
 }
-.watermark{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;background-repeat:repeat;}
+
+/* ============ 动态背景光斑 ============ */
+body::before,body::after{
+  content:""; position:fixed; border-radius:50%; z-index:0; pointer-events:none;
+  filter:blur(80px); opacity:.35;
+}
+body::before{
+  width:360px; height:360px; background:radial-gradient(circle,#cfe6d4 0%,transparent 70%);
+  top:-80px; left:-100px;
+  animation:floatOrb1 14s ease-in-out infinite;
+}
+body::after{
+  width:420px; height:420px; background:radial-gradient(circle,#f0d9a8 0%,transparent 70%);
+  bottom:-120px; right:-120px;
+  animation:floatOrb2 16s ease-in-out infinite;
+}
+@keyframes floatOrb1{
+  0%,100%{transform:translate(0,0);}
+  50%{transform:translate(40px,60px);}
+}
+@keyframes floatOrb2{
+  0%,100%{transform:translate(0,0);}
+  50%{transform:translate(-50px,-40px);}
+}
+
+/* ============ 水印 ============ */
+.watermark{
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  opacity:.12; background-repeat:repeat;
+  animation:watermarkDrift 60s linear infinite;
+}
+@keyframes watermarkDrift{
+  0%{background-position:0 0;}
+  100%{background-position:340px 90px;}
+}
+
 .page{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:0 16px 44px;}
 
-/* 顶部品牌区 */
+/* ============ 顶部品牌区 ============ */
 .brand{padding:24px 4px 4px;}
 .brand-top{display:flex;align-items:center;gap:12px;}
-.logo{width:56px;height:56px;flex:none;filter:drop-shadow(0 2px 6px rgba(19,80,59,.18));}
-.brand-name h1{margin:0;font-family:var(--serif);font-size:22px;font-weight:700;color:var(--green-deep);letter-spacing:.5px;}
+.logo{
+  width:56px;height:56px;flex:none;filter:drop-shadow(0 2px 6px rgba(19,80,59,.18));
+  animation:logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat{
+  0%,100%{transform:translateY(0) rotate(0deg);}
+  50%{transform:translateY(-4px) rotate(1.5deg);}
+}
+.brand-name h1{
+  margin:0;font-family:var(--serif);font-size:22px;font-weight:700;
+  color:var(--green-deep);letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--green-deep) 0%,var(--green) 40%,var(--gold) 100%);
+  background-size:200% 200%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:titleShimmer 6s ease-in-out infinite;
+}
+@keyframes titleShimmer{
+  0%,100%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+}
 .brand-name .sub{margin:2px 0 0;font-size:12px;color:var(--ink-3);letter-spacing:.4px;}
 .brand-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.2;}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+  font-size:12.5px;font-weight:600;line-height:1.2;
+  transition:transform .3s ease,box-shadow .3s ease;
+  animation:badgeFade .8s ease both;
+}
+.badge:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(19,80,59,.15);}
 .badge-gold{color:#8a6412;background:var(--gold-soft);border:1px solid var(--gold-line);}
 .badge-green{color:var(--green);background:var(--green-soft);border:1px solid #cfe2d6;}
 .badge svg{width:15px;height:15px;flex:none;}
 .herb-title{margin-top:18px;}
-.herb-title h2{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;color:var(--ink);letter-spacing:1px;}
+.herb-title h2{
+  margin:0;font-family:var(--serif);font-size:30px;font-weight:700;color:var(--ink);letter-spacing:1px;
+  position:relative; display:inline-block;
+}
+.herb-title h2::after{
+  content:""; position:absolute; left:0; bottom:-4px; height:3px; width:0;
+  background:linear-gradient(90deg,var(--green),var(--gold));
+  border-radius:2px;
+  animation:underlineGrow 1.2s .6s ease forwards;
+}
+@keyframes underlineGrow{
+  to{width:100%;}
+}
 .herb-title .latin{margin:2px 0 0;font-size:13.5px;color:var(--ink-3);font-style:italic;}
 .herb-title .batch-row{margin-top:8px;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);}
 .herb-title .batch-row b{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-weight:600;color:var(--green-deep);}
 
-/* 卡片 */
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 18px 20px;margin-top:14px;}
+/* ============ 卡片通用 ============ */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow);padding:18px 18px 20px;margin-top:14px;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s ease, border-color .4s ease;
+  animation:cardEnter .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 4px 6px rgba(25,50,40,.06),0 18px 40px rgba(19,80,59,.12);
+  border-color:#cfe2d6;
+}
 .card h3{margin:0 0 16px;font-family:var(--serif);font-size:17px;font-weight:700;color:var(--green-deep);}
-.card h3::after{content:"";display:block;width:30px;height:2.5px;border-radius:2px;background:linear-gradient(90deg,var(--gold),rgba(217,195,145,0));margin-top:7px;}
+.card h3::after{
+  content:"";display:block;width:30px;height:2.5px;border-radius:2px;
+  background:linear-gradient(90deg,var(--gold),rgba(217,195,145,0));margin-top:7px;
+  animation:h3Grow 1.2s ease both;
+}
+@keyframes h3Grow{
+  from{width:0;}
+  to{width:30px;}
+}
 
-/* 验证概览卡 */
+/* ============ 验证概览卡 ============ */
 .verify-head{display:flex;align-items:flex-start;gap:12px;}
-.check-ring{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--green-soft);}
-.check-ring svg{width:26px;height:26px;}
+.check-ring{
+  width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--green-soft);
+  animation:ringPulse 2.4s ease-in-out infinite;
+}
+.check-ring svg{width:26px;height:26px;animation:checkDraw 1s .3s ease both;}
+@keyframes ringPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(11,110,79,.35);}
+  50%{box-shadow:0 0 0 10px rgba(11,110,79,0);}
+}
+@keyframes checkDraw{
+  0%{stroke-dasharray:40;stroke-dashoffset:40;}
+  100%{stroke-dasharray:40;stroke-dashoffset:0;}
+}
 .verify-title{font-size:18px;font-weight:700;color:var(--green-deep);}
 .verify-time{margin-top:2px;font-size:12.5px;color:var(--ink-3);}
 .verify-time b{color:var(--ink-2);font-weight:600;}
 .scan-count{margin-left:auto;font-size:12.5px;color:var(--ink-2);text-align:right;flex:none;}
-.scan-count b{display:block;font-size:20px;color:var(--green);font-weight:700;}
-.hash-box{margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--green-tint);border:1px dashed #cfe2d6;}
+.scan-count b{
+  display:block;font-size:20px;color:var(--green);font-weight:700;
+  animation:countPop .6s .4s ease both;
+}
+@keyframes countPop{
+  0%{transform:scale(.5);opacity:0;}
+  60%{transform:scale(1.15);opacity:1;}
+  100%{transform:scale(1);}
+}
+.hash-box{
+  margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--green-tint);
+  border:1px dashed #cfe2d6;
+  transition:border-color .3s ease;
+}
+.hash-box:hover{border-color:var(--green);}
 .hash-box .lbl{font-size:12px;color:var(--ink-2);font-weight:600;letter-spacing:.3px;}
 .hash-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
-.hash-row code{flex:1;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--green-deep);word-break:break-all;line-height:1.5;}
-.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--green-deep);font-family:var(--sans);font-size:13px;font-weight:600;padding:7px 13px;border-radius:10px;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .15s ease;}
-.btn:hover{background:var(--green-soft);border-color:#cfe2d6;}
+.hash-row code{
+  flex:1;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;
+  color:var(--green-deep);word-break:break-all;line-height:1.5;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
+  color:var(--green-deep);font-family:var(--sans);font-size:13px;font-weight:600;
+  padding:7px 13px;border-radius:10px;cursor:pointer;
+  transition:background .25s ease,border-color .25s ease,transform .2s ease,box-shadow .25s ease;
+}
+.btn:hover{background:var(--green-soft);border-color:#cfe2d6;transform:translateY(-1px);box-shadow:0 6px 14px rgba(19,80,59,.12);}
 .btn:active{transform:translateY(1px);}
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 .btn svg{width:15px;height:15px;}
@@ -70,78 +194,195 @@ body{
 .btn.gold:hover{background:#8a6412;border-color:#8a6412;}
 .btn.done{background:var(--green);border-color:var(--green);color:#fff;}
 
-/* 信息网格 */
+/* ============ 信息网格 ============ */
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
-.info-item{display:flex;gap:9px;align-items:flex-start;min-width:0;}
+.info-item{
+  display:flex;gap:9px;align-items:flex-start;min-width:0;
+  transition:transform .3s ease;
+}
+.info-item:hover{transform:translateX(3px);}
 .info-item svg{width:19px;height:19px;flex:none;color:var(--gold);margin-top:1px;}
 .info-item .k{font-size:12px;color:var(--ink-3);}
 .info-item .v{margin-top:1px;font-size:14.5px;font-weight:600;color:var(--ink);word-break:break-all;}
-.dao-di{margin-top:16px;display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:11px;background:var(--gold-soft);border:1px solid var(--gold-line);}
+.dao-di{
+  margin-top:16px;display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:11px;
+  background:var(--gold-soft);border:1px solid var(--gold-line);
+  transition:transform .3s ease,box-shadow .3s ease;
+}
+.dao-di:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(166,124,26,.18);}
 .dao-di svg{width:19px;height:19px;flex:none;color:var(--gold);}
 .dao-di span{font-size:13.5px;font-weight:600;color:#8a6412;}
 
-/* 时间线 */
+/* ============ 时间线 ============ */
 .timeline{list-style:none;margin:0;padding:0;position:relative;}
-.timeline::before{content:"";position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--green),#cfe2d6);border-radius:2px;}
-.timeline li{position:relative;padding:0 0 20px 34px;}
+.timeline::before{
+  content:"";position:absolute;left:11px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(180deg,var(--green),#cfe2d6);border-radius:2px;
+  animation:timelineGrow 1.5s ease both;
+}
+@keyframes timelineGrow{
+  from{height:0;}
+  to{height:100%;}
+}
+@keyframes timelineItemIn{
+  from{opacity:0;transform:translateX(-10px);}
+  to{opacity:1;transform:translateX(0);}
+}
+.timeline li{
+  position:relative;padding:0 0 20px 34px;
+  opacity:1; transform:none;
+  animation:timelineItemIn .6s cubic-bezier(.2,.8,.2,1) backwards;
+}
 .timeline li:last-child{padding-bottom:0;}
-.timeline .dot{position:absolute;left:6px;top:4px;width:12px;height:12px;border-radius:50%;background:#fff;border:2.5px solid var(--green);}
+.timeline .dot{
+  position:absolute;left:6px;top:4px;width:12px;height:12px;border-radius:50%;
+  background:#fff;border:2.5px solid var(--green);
+  animation:dotPop .5s ease both, dotPulse 3s ease-in-out infinite 1s;
+}
 .timeline li:last-child .dot{border-color:var(--gold);}
+@keyframes dotPop{
+  0%{transform:scale(0);}
+  80%{transform:scale(1.3);}
+  100%{transform:scale(1);}
+}
+@keyframes dotPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(11,110,79,.4);}
+  50%{box-shadow:0 0 0 6px rgba(11,110,79,0);}
+}
 .timeline .t-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .timeline .t-name{font-size:15px;font-weight:700;color:var(--ink);}
 .timeline .t-date{font-size:12px;color:var(--ink-3);font-family:ui-monospace,Consolas,monospace;}
 .timeline .t-desc{margin-top:3px;font-size:13px;color:var(--ink-2);}
 
-/* 环境数据 */
+/* ============ 环境数据 ============ */
 .env-chart{margin:2px 0 4px;}
 .env-chart svg{width:100%;height:auto;display:block;}
 .env-legend{display:flex;gap:16px;margin:10px 0 16px;font-size:12.5px;color:var(--ink-2);}
 .env-legend span{display:inline-flex;align-items:center;gap:6px;}
 .env-legend i{width:14px;height:3px;border-radius:2px;display:inline-block;}
 .env-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.env-stat{padding:12px 10px;border-radius:11px;background:var(--green-tint);text-align:center;}
-.env-stat .n{font-size:18px;font-weight:700;color:var(--green-deep);font-family:var(--serif);}
+.env-stat{
+  padding:12px 10px;border-radius:11px;background:var(--green-tint);text-align:center;
+  transition:transform .3s ease,box-shadow .3s ease;
+}
+.env-stat:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(19,80,59,.1);}
+.env-stat .n{
+  font-size:18px;font-weight:700;color:var(--green-deep);font-family:var(--serif);
+  transition:color .3s ease;
+}
+.env-stat:hover .n{color:var(--green);}
 .env-stat .u{font-size:12px;color:var(--ink-3);}
 .env-stat .l{display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px;}
 
-/* 检测报告 */
+/* ============ 检测报告 ============ */
 .qa-meta{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink-2);margin-bottom:14px;}
 .qa-meta .agency{font-weight:600;color:var(--ink);}
 .qa-table{width:100%;border-collapse:collapse;font-size:13px;}
-.qa-table th,.qa-table td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line-2);}
+.qa-table th,.qa-table td{
+  padding:9px 10px;text-align:left;border-bottom:1px solid var(--line-2);
+  transition:background .3s ease;
+}
 .qa-table th{font-size:12px;color:var(--ink-3);font-weight:600;}
+.qa-table tbody tr{transition:background .3s ease,transform .3s ease;}
+.qa-table tbody tr:hover{background:var(--green-tint);transform:translateX(4px);}
 .qa-table td:nth-child(2),.qa-table td:nth-child(3){font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--ink-2);}
 .qa-table td:last-child{text-align:right;}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;}
-.pill.ok{color:var(--green);background:var(--green-soft);}
+.pill.ok{
+  color:var(--green);background:var(--green-soft);
+  animation:pillShine 2s ease-in-out infinite;
+}
 .pill.ok svg{width:13px;height:13px;}
+@keyframes pillShine{
+  0%,100%{box-shadow:0 0 0 0 rgba(11,110,79,.2);}
+  50%{box-shadow:0 0 0 4px rgba(11,110,79,0);}
+}
 .qa-report-btn{margin-top:16px;width:100%;}
 
-/* 区块链存证 */
-.chain-card{background:linear-gradient(180deg,#0f3d2e,#13503b);border-color:#0f3d2e;color:#eaf3ec;}
+/* ============ 区块链存证 ============ */
+.chain-card{
+  background:linear-gradient(180deg,#0f3d2e,#13503b);border-color:#0f3d2e;color:#eaf3ec;
+  position:relative; overflow:hidden;
+}
+.chain-card::before{
+  content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle,rgba(246,236,215,.08) 0%,transparent 40%);
+  animation:chainGlow 8s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes chainGlow{
+  0%,100%{transform:translate(0,0);}
+  50%{transform:translate(10%,10%);}
+}
 .chain-card h3{color:#f6f4ee;}
 .chain-card h3::after{background:linear-gradient(90deg,var(--gold),rgba(217,195,145,0));}
-.chain-row{display:flex;flex-direction:column;gap:10px;}
+.chain-row{display:flex;flex-direction:column;gap:10px;position:relative;}
 .chain-fact{display:flex;gap:10px;align-items:flex-start;}
 .chain-fact svg{width:18px;height:18px;flex:none;color:var(--gold);margin-top:1px;}
 .chain-fact .k{font-size:12px;color:rgba(234,243,236,.72);}
 .chain-fact .v{font-size:13.5px;font-weight:600;color:#f6f4ee;word-break:break-all;font-family:ui-monospace,Consolas,monospace;}
 .chain-fact .v.normal{font-family:var(--sans);}
-.chain-note{margin:16px 0;padding:12px 14px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(246,244,238,.14);font-size:13px;color:#eaf3ec;display:flex;gap:8px;align-items:flex-start;}
+.chain-note{
+  margin:16px 0;padding:12px 14px;border-radius:11px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(246,244,238,.14);font-size:13px;color:#eaf3ec;
+  display:flex;gap:8px;align-items:flex-start;
+  transition:border-color .3s ease,background .3s ease;
+}
+.chain-note:hover{background:rgba(255,255,255,.1);border-color:rgba(246,244,238,.28);}
 .chain-note svg{width:17px;height:17px;flex:none;color:var(--gold);margin-top:1px;}
-.chain-actions{display:flex;gap:10px;}
+.chain-actions{display:flex;gap:10px;position:relative;}
 .chain-actions .btn{flex:1;justify-content:center;}
 .chain-actions .btn.gold{background:var(--gold);border-color:var(--gold);}
 .chain-actions .btn.gold:hover{background:#c99a2a;border-color:#c99a2a;}
 .chain-actions .btn.ghost{background:transparent;border-color:rgba(246,244,238,.3);color:#f6f4ee;}
 .chain-actions .btn.ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(246,244,238,.5);}
 
-/* 底部 */
-footer{margin-top:26px;padding:20px 6px 0;text-align:center;}
+/* ============ 底部 ============ */
+footer{
+  margin-top:26px;padding:20px 6px 0;text-align:center;
+  animation:fadeInUp .8s ease both;
+}
 footer .sm3{font-size:12px;color:var(--ink-3);line-height:1.7;}
 footer .sm3 b{color:var(--green-deep);}
 footer .copyright{margin-top:10px;font-size:12px;color:var(--ink-3);}
-footer .divider{width:60px;height:1px;background:var(--gold-line);margin:16px auto 0;}
+footer .divider{
+  width:60px;height:1px;background:var(--gold-line);margin:16px auto 0;
+  animation:dividerGrow 1s ease both;
+}
+@keyframes dividerGrow{
+  from{width:0;}
+  to{width:60px;}
+}
+
+/* ============ 全局动画 ============ */
+@keyframes cardEnter{
+  from{opacity:0;transform:translateY(16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+@keyframes badgeFade{
+  from{opacity:0;transform:translateY(-6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* 卡片错峰入场 */
+.card:nth-of-type(1){animation-delay:.05s;}
+.card:nth-of-type(2){animation-delay:.15s;}
+.card:nth-of-type(3){animation-delay:.25s;}
+.card:nth-of-type(4){animation-delay:.35s;}
+.card:nth-of-type(5){animation-delay:.45s;}
+.card:nth-of-type(6){animation-delay:.55s;}
+.card:nth-of-type(7){animation-delay:.65s;}
+
+/* 时间线条目错峰 */
+.timeline li:nth-child(1){animation-delay:.4s;}
+.timeline li:nth-child(2){animation-delay:.55s;}
+.timeline li:nth-child(3){animation-delay:.7s;}
+.timeline li:nth-child(4){animation-delay:.85s;}
+.timeline li:nth-child(5){animation-delay:1s;}
 
 @media (max-width:374px){
   .info-grid{grid-template-columns:1fr;}
@@ -160,9 +401,14 @@ footer .divider{width:60px;height:1px;background:var(--gold-line);margin:16px au
   <!-- 1. 顶部品牌区 -->
   <header class="brand">
     <div class="brand-top">
-      <img class="logo" src="assets/logo.svg" alt="天鉴数链印章标志"/>
+      <svg class="logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="天鉴数链印章标志">
+        <circle cx="32" cy="32" r="30" fill="#fff"/>
+        <circle cx="32" cy="32" r="24" fill="#13503b"/>
+        <circle cx="32" cy="32" r="20" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+        <text x="32" y="39" text-anchor="middle" font-family="Songti SC,SimSun,serif" font-size="22" font-weight="700" fill="#f6f4ee">鉴</text>
+      </svg>
       <div class="brand-name">
-        <h1>天鉴数链 · 本草兴乡</h1>
+        <h1>天鉴数链</h1>
         <p class="sub">Tianjian Data Chain · 道地药材溯源</p>
       </div>
     </div>
@@ -282,59 +528,22 @@ footer .divider{width:60px;height:1px;background:var(--gold-line);margin:16px au
 
   <!-- 8. 底部 -->
   <footer>
-    <p class="sm3">本溯源页数据指纹经国密 <b>SM3</b> 哈希校验，全程 <b>SM2/SM4</b> 加密存证<br/>天鉴数链 · 本草兴乡 · 道地药材普惠溯源</p>
+    <p class="sm3">本溯源页数据指纹经国密 <b>SM3</b> 哈希校验，全程 <b>SM2/SM4</b> 加密存证<br/>天鉴数链 · 道地药材普惠溯源</p>
     <div class="divider"></div>
     <p class="copyright">© 2026 天鉴数链 · Tianjian Data Chain</p>
   </footer>
 </div>
 
 <script>
-/* ===== mock 数据（内嵌，保证 file:// 直开；与 data.json 字段对齐 trace_detail_view） ===== */
-var TRACE_DATA = {
-  "batch_id": "DEMO-001",
-  "uuid": "018f3a2e-7b4c-4d1f-9c8e-2a6b5d3f0e17",
-  "herb": { "name": "铁皮石斛", "latin": "Dendrobium officinale", "dao_di_region": "浙江省温州市乐清市雁荡山", "dao_di_certified": true },
-  "farmer": { "name": "陈伟民", "cooperative": "铁枫堂雁荡山种植基地" },
-  "farmland": { "name": "雁荡山道地示范田", "area_mu": 196, "altitude": 480, "soil_type": "火山岩腐殖土" },
-  "plant_date": "2025-04-12",
-  "harvest_date": "2026-04-20",
-  "timeline": [
-    { "type": "播种", "date": "2025-04-12", "desc": "雁荡山原生种苗定植，GPS 地块确权编号 YDS-196" },
-    { "type": "施肥", "date": "2025-06-08", "desc": "施用腐熟羊粪有机肥，土壤 pH 6.2，NPK 均衡" },
-    { "type": "灌溉", "date": "2025-08-15", "desc": "山泉水滴灌，弱网 IoT 传感周期上报 13.1 万条" },
-    { "type": "采收", "date": "2026-04-20", "desc": "人工精选 2 年以上鲜条，含水率达标，分拣包装" },
-    { "type": "检测", "date": "2026-04-21", "desc": "送检温州市食品药品检验检测中心，国密 SM3 存证上链" }
-  ],
-  "env": {
-    "avg_temp": 21.6, "avg_humidity": 68, "total_light": 1580,
-    "series": [
-      { "t": 16.2, "h": 72 }, { "t": 17.8, "h": 70 }, { "t": 19.4, "h": 71 }, { "t": 21.0, "h": 69 },
-      { "t": 22.5, "h": 67 }, { "t": 23.8, "h": 66 }, { "t": 24.6, "h": 65 }, { "t": 24.0, "h": 67 },
-      { "t": 22.1, "h": 68 }, { "t": 20.3, "h": 70 }, { "t": 18.5, "h": 69 }, { "t": 17.1, "h": 68 }
-    ]
-  },
-  "quality": {
-    "agency": "温州市食品药品检验检测中心",
-    "standard": "《中国药典》2025 年版 · 一部",
-    "items": [
-      { "name": "浸出物", "result": "≥ 6.5%", "limit": "≥ 6.5%", "compliant": true },
-      { "name": "多糖含量", "result": "32.8%", "limit": "≥ 25.0%", "compliant": true },
-      { "name": "甘露糖", "result": "13.2%", "limit": "13.0% ~ 38.0%", "compliant": true },
-      { "name": "农药残留", "result": "未检出", "limit": "≤ 限量", "compliant": true },
-      { "name": "重金属", "result": "合格", "limit": "≤ 限量", "compliant": true }
-    ]
-  },
-  "chain": {
-    "chain_name": "长安链 ChainMaker",
-    "sm3_hash": "8a3f5c9d2e7b4a1f6c8d0e2f4a6b8c0d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b",
-    "tx_hash": "0x9c4f8e2a1b6d3c5f7e9a0b2d4c6e8f1a3b5d7f9e1a3c5b7d9f0e2a4c6b8d0e1",
-    "block_height": 2187346,
-    "on_chain_time": "2026-04-22 10:32:18"
-  },
-  "scan_count": 128
-};
+/* ===== 全局数据变量 ===== */
+var TRACE_DATA = null;
 
-/* ===== 工具：复制到剪贴板 ===== */
+/* ===== 工具函数 ===== */
+function pad(n){ return (n<10?'0':'')+n; }
+function fmtTime(d){
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '
+    + pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
 function copyText(val, btn){
   var done = function(){
     if(!btn) return;
@@ -354,94 +563,6 @@ function copyText(val, btn){
     navigator.clipboard.writeText(val).then(done).catch(fallback);
   } else { fallback(); }
 }
-
-/* ===== 动态验证时间（精确到秒） ===== */
-function pad(n){ return (n<10?'0':'')+n; }
-function fmtTime(d){
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '
-    + pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-}
-document.getElementById('verifyTime').textContent = fmtTime(new Date());
-
-/* ===== 扫码次数 / 哈希 / 报告 ===== */
-document.getElementById('scanCount').textContent = TRACE_DATA.scan_count;
-document.getElementById('sm3Hash').textContent = TRACE_DATA.chain.sm3_hash;
-document.getElementById('txHash').textContent = TRACE_DATA.chain.tx_hash;
-document.getElementById('chainTime').textContent = TRACE_DATA.chain.on_chain_time + ' · #' + TRACE_DATA.chain.block_height;
-document.getElementById('qaAgency').textContent = TRACE_DATA.quality.agency;
-document.getElementById('qaStandard').textContent = TRACE_DATA.quality.standard;
-
-/* ===== 时间线渲染 ===== */
-(function(){
-  var ol = document.getElementById('timeline');
-  var html = '';
-  TRACE_DATA.timeline.forEach(function(node){
-    html += '<li><span class="dot"></span>'
-      + '<div class="t-row"><span class="t-name">'+node.type+'</span><span class="t-date">'+node.date+'</span></div>'
-      + '<div class="t-desc">'+node.desc+'</div></li>';
-  });
-  ol.innerHTML = html;
-})();
-
-/* ===== 品质检测表格渲染 ===== */
-(function(){
-  var tbody = document.getElementById('qaBody');
-  var html = '';
-  TRACE_DATA.quality.items.forEach(function(item){
-    html += '<tr><td>'+item.name+'</td><td>'+item.result+'</td><td>'+item.limit+'</td><td>'
-      + '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>合格</span></td></tr>';
-  });
-  tbody.innerHTML = html;
-})();
-
-/* ===== 环境数据：迷你折线（手写 SVG，零依赖） ===== */
-(function(){
-  var s = TRACE_DATA.env.series;
-  var W = 320, H = 128, L = 30, R = 10, T = 12, B = 20;
-  var xs = function(i){ return L + (W-L-R) * i / (s.length-1); };
-  var tMin = Math.min.apply(null, s.map(function(d){return d.t;})) - 1;
-  var tMax = Math.max.apply(null, s.map(function(d){return d.t;})) + 1;
-  var hMin = Math.min.apply(null, s.map(function(d){return d.h;})) - 2;
-  var hMax = Math.max.apply(null, s.map(function(d){return d.h;})) + 2;
-  var yT = function(v){ return T + (H-T-B) * (1 - (v-tMin)/(tMax-tMin)); };
-  var yH = function(v){ return T + (H-T-B) * (1 - (v-hMin)/(hMax-hMin)); };
-
-  var tPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yT(d.t).toFixed(1); }).join(' ');
-  var hPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yH(d.h).toFixed(1); }).join(' ');
-  var areaPts = L+','+ (H-B) + ' ' + tPts + ' ' + (W-R)+','+(H-B);
-
-  var grid = '';
-  for (var g = 0; g <= 3; g++){
-    var gy = T + (H-T-B) * g / 3;
-    grid += '<line x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'" stroke="#e7e2d4" stroke-width="1"/>';
-  }
-
-  var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="温湿度生长曲线">'
-    + grid
-    + '<polygon points="'+areaPts+'" fill="rgba(11,110,79,0.08)"/>'
-    + '<polyline points="'+tPts+'" fill="none" stroke="#0b6e4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '<polyline points="'+hPts+'" fill="none" stroke="#c9a227" stroke-width="1.6" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>';
-  s.forEach(function(d,i){
-    svg += '<circle cx="'+xs(i).toFixed(1)+'" cy="'+yT(d.t).toFixed(1)+'" r="2.2" fill="#0b6e4f"/>';
-  });
-  svg += '</svg>';
-  document.getElementById('envChart').innerHTML = svg;
-
-  document.getElementById('avgTemp').textContent = TRACE_DATA.env.avg_temp;
-  document.getElementById('avgHum').textContent = TRACE_DATA.env.avg_humidity;
-  document.getElementById('totalLight').textContent = TRACE_DATA.env.total_light;
-})();
-
-/* ===== 复制按钮 ===== */
-document.querySelectorAll('[data-copy]').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    var sel = btn.getAttribute('data-copy');
-    var el = document.querySelector(sel);
-    copyText(el ? el.textContent : '', btn);
-  });
-});
-
-/* ===== 报告 / 链上查验（演示版：轻提示） ===== */
 function demoToast(msg){
   var t = document.createElement('div');
   t.textContent = msg;
@@ -451,18 +572,188 @@ function demoToast(msg){
   setTimeout(function(){ t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(0)'; }, 1800);
   setTimeout(function(){ t.remove(); }, 2200);
 }
+
+/* ===== 渲染函数 ===== */
+function renderAll(data){
+  TRACE_DATA = data;
+  document.getElementById('verifyTime').textContent = fmtTime(new Date());
+  document.getElementById('scanCount').textContent = data.scan_count;
+  document.getElementById('sm3Hash').textContent = data.chain.sm3_hash;
+  document.getElementById('txHash').textContent = data.chain.tx_hash;
+  document.getElementById('chainTime').textContent = data.chain.on_chain_time + ' · #' + data.chain.block_height;
+  document.getElementById('qaAgency').textContent = data.quality.agency;
+  document.getElementById('qaStandard').textContent = data.quality.standard;
+
+  var ol = document.getElementById('timeline');
+  var html = '';
+  data.timeline.forEach(function(node){
+    html += '<li><span class="dot"></span>'
+      + '<div class="t-row"><span class="t-name">'+node.type+'</span><span class="t-date">'+node.date+'</span></div>'
+      + '<div class="t-desc">'+node.desc+'</div></li>';
+  });
+  ol.innerHTML = html;
+
+  var tbody = document.getElementById('qaBody');
+  html = '';
+  data.quality.items.forEach(function(item){
+    html += '<tr><td>'+item.name+'</td><td>'+item.result+'</td><td>'+item.limit+'</td><td>'
+      + '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>合格</span></td></tr>';
+  });
+  tbody.innerHTML = html;
+
+  (function(){
+    var s = data.env.series;
+    var W = 320, H = 128, L = 30, R = 10, T = 12, B = 20;
+    var xs = function(i){ return L + (W-L-R) * i / (s.length-1); };
+    var tMin = Math.min.apply(null, s.map(function(d){return d.t;})) - 1;
+    var tMax = Math.max.apply(null, s.map(function(d){return d.t;})) + 1;
+    var hMin = Math.min.apply(null, s.map(function(d){return d.h;})) - 2;
+    var hMax = Math.max.apply(null, s.map(function(d){return d.h;})) + 2;
+    var yT = function(v){ return T + (H-T-B) * (1 - (v-tMin)/(tMax-tMin)); };
+    var yH = function(v){ return T + (H-T-B) * (1 - (v-hMin)/(hMax-hMin)); };
+
+    var tPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yT(d.t).toFixed(1); }).join(' ');
+    var hPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yH(d.h).toFixed(1); }).join(' ');
+    var areaPts = L+','+ (H-B) + ' ' + tPts + ' ' + (W-R)+','+(H-B);
+
+    var grid = '';
+    for (var g = 0; g <= 3; g++){
+      var gy = T + (H-T-B) * g / 3;
+      grid += '<line x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'" stroke="#e7e2d4" stroke-width="1"/>';
+    }
+
+    var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="温湿度生长曲线">'
+      + grid
+      + '<polygon points="'+areaPts+'" fill="rgba(11,110,79,0.08)"/>'
+      + '<polyline points="'+tPts+'" fill="none" stroke="#0b6e4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '<polyline points="'+hPts+'" fill="none" stroke="#c9a227" stroke-width="1.6" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>';
+    s.forEach(function(d,i){
+      svg += '<circle cx="'+xs(i).toFixed(1)+'" cy="'+yT(d.t).toFixed(1)+'" r="2.2" fill="#0b6e4f"/>';
+    });
+    svg += '</svg>';
+    document.getElementById('envChart').innerHTML = svg;
+
+    document.getElementById('avgTemp').textContent = data.env.avg_temp;
+    document.getElementById('avgHum').textContent = data.env.avg_humidity;
+    document.getElementById('totalLight').textContent = data.env.total_light;
+  })();
+
+  (function(){
+    var wm = document.getElementById('watermark');
+    var txt = '天鉴数链 · 批次 '+data.batch_id+' · 验证时间 '+fmtTime(new Date());
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='340' height='90'>"
+      + "<text x='0' y='30' font-family='sans-serif' font-size='13' fill='%230b6e4f' transform='rotate(-24 24 24)'>"+txt+"</text></svg>";
+    wm.style.backgroundImage = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";
+    wm.style.backgroundSize = "340px 90px";
+  })();
+}
+
+/* ===== 加载数据：优先后端 API，回退静态 data.json + localStorage（Vercel 兼容） ===== */
+var LS_BASELINE = 'trace_scan_baseline';
+var LS_LOCAL   = 'local_scan_count';
+
+function applyCount(data){
+  var baseline = parseInt(data.scan_count, 10) || 0;
+  var saved = parseInt(localStorage.getItem(LS_BASELINE) || '0', 10);
+  if(baseline < saved){
+    localStorage.setItem(LS_LOCAL, '0');
+  }
+  localStorage.setItem(LS_BASELINE, baseline);
+  var local = parseInt(localStorage.getItem(LS_LOCAL) || '0', 10);
+  local += 1;
+  localStorage.setItem(LS_LOCAL, local);
+  data.scan_count = baseline + local;
+  return data;
+}
+
+function loadData(){
+  fetch('/api/visit', { cache: 'no-store' })
+    .then(function(res){
+      if(!res.ok) throw new Error('api error');
+      return res.json();
+    })
+    .then(function(data){
+      try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
+      renderAll(data);
+    })
+    .catch(function(){
+      fetch('data.json', { cache: 'no-store' })
+        .then(function(res){
+          if(!res.ok) throw new Error('data.json not found');
+          return res.json();
+        })
+        .then(function(data){
+          data = applyCount(data);
+          try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
+          renderAll(data);
+        })
+        .catch(function(){
+          var cached = null;
+          try { cached = JSON.parse(localStorage.getItem('trace_data_cache') || 'null'); } catch(e){}
+          if(cached && typeof cached.scan_count === 'number'){
+            cached = applyCount(cached);
+            renderAll(cached);
+          } else {
+            var fallback = {
+              batch_id: "DEMO-001",
+              uuid: "018f3a2e-7b4c-4d1f-9c8e-2a6b5d3f0e17",
+              herb: { name: "铁皮石斛", latin: "Dendrobium officinale", dao_di_region: "浙江省温州市乐清市雁荡山", dao_di_certified: true },
+              farmer: { name: "陈伟民", cooperative: "铁枫堂雁荡山种植基地" },
+              farmland: { name: "雁荡山道地示范田", area_mu: 196, altitude: 480, soil_type: "火山岩腐殖土" },
+              plant_date: "2025-04-12", harvest_date: "2026-04-20",
+              timeline: [
+                { type: "播种", date: "2025-04-12", desc: "雁荡山原生种苗定植，GPS 地块确权编号 YDS-196" },
+                { type: "施肥", date: "2025-06-08", desc: "施用腐熟羊粪有机肥，土壤 pH 6.2，NPK 均衡" },
+                { type: "灌溉", date: "2025-08-15", desc: "山泉水滴灌，弱网 IoT 传感周期上报 13.1 万条" },
+                { type: "采收", date: "2026-04-20", desc: "人工精选 2 年以上鲜条，含水率达标，分拣包装" },
+                { type: "检测", date: "2026-04-21", desc: "送检温州市食品药品检验检测中心，国密 SM3 存证上链" }
+              ],
+              env: {
+                avg_temp: 21.6, avg_humidity: 68, total_light: 1580,
+                series: [
+                  { t: 16.2, h: 72 }, { t: 17.8, h: 70 }, { t: 19.4, h: 71 }, { t: 21.0, h: 69 },
+                  { t: 22.5, h: 67 }, { t: 23.8, h: 66 }, { t: 24.6, h: 65 }, { t: 24.0, h: 67 },
+                  { t: 22.1, h: 68 }, { t: 20.3, h: 70 }, { t: 18.5, h: 69 }, { t: 17.1, h: 68 }
+                ]
+              },
+              quality: {
+                agency: "温州市食品药品检验检测中心", standard: "《中国药典》2025 年版 · 一部",
+                items: [
+                  { name: "浸出物", result: "≥ 6.5%", limit: "≥ 6.5%", compliant: true },
+                  { name: "多糖含量", result: "32.8%", limit: "≥ 25.0%", compliant: true },
+                  { name: "甘露糖", result: "13.2%", limit: "13.0% ~ 38.0%", compliant: true },
+                  { name: "农药残留", result: "未检出", limit: "≤ 限量", compliant: true },
+                  { name: "重金属", result: "合格", limit: "≤ 限量", compliant: true }
+                ]
+              },
+              chain: {
+                chain_name: "长安链 ChainMaker",
+                sm3_hash: "8a3f5c9d2e7b4a1f6c8d0e2f4a6b8c0d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b",
+                tx_hash: "0x9c4f8e2a1b6d3c5f7e9a0b2d4c6e8f1a3b5d7f9e1a3c5b7d9f0e2a4c6b8d0e1",
+                block_height: 2187346, on_chain_time: "2026-04-22 10:32:18"
+              },
+              scan_count: 0
+            };
+            fallback = applyCount(fallback);
+            renderAll(fallback);
+          }
+        });
+    });
+}
+
+/* ===== 事件绑定 ===== */
+document.querySelectorAll('[data-copy]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var sel = btn.getAttribute('data-copy');
+    var el = document.querySelector(sel);
+    copyText(el ? el.textContent : '', btn);
+  });
+});
 document.getElementById('reportBtn').addEventListener('click', function(){ demoToast('完整版接入 PDF 报告后即可在线查看'); });
 document.getElementById('chainCheckBtn').addEventListener('click', function(){ demoToast('完整版接入长安链浏览器后即可链上查验'); });
 
-/* ===== 动态防伪水印（扫码时间 + 批次号） ===== */
-(function(){
-  var wm = document.getElementById('watermark');
-  var txt = '天鉴数链 · 批次 '+TRACE_DATA.batch_id+' · 验证时间 '+fmtTime(new Date());
-  var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='340' height='90'>"
-    + "<text x='0' y='30' font-family='sans-serif' font-size='13' fill='%230b6e4f' transform='rotate(-24 24 24)'>"+txt+"</text></svg>";
-  wm.style.backgroundImage = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";
-  wm.style.backgroundSize = "340px 90px";
-})();
+/* ===== 启动 ===== */
+loadData();
 </script>
 </body>
 </html>
