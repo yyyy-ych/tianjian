@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>天鉴数链 · 本草兴乡 — 溯源验证</title>
+<title>天鉴数链 — 溯源验证</title>
 <style>
 :root{
   --bg:#f6f4ee; --card:#ffffff; --ink:#1f2a24; --ink-2:#46564c; --ink-3:#6d7a71;
@@ -162,7 +162,7 @@ footer .divider{width:60px;height:1px;background:var(--gold-line);margin:16px au
     <div class="brand-top">
       <img class="logo" src="assets/logo.svg" alt="天鉴数链印章标志"/>
       <div class="brand-name">
-        <h1>天鉴数链 · 本草兴乡</h1>
+        <h1>天鉴数链</h1>
         <p class="sub">Tianjian Data Chain · 道地药材溯源</p>
       </div>
     </div>
@@ -282,7 +282,7 @@ footer .divider{width:60px;height:1px;background:var(--gold-line);margin:16px au
 
   <!-- 8. 底部 -->
   <footer>
-    <p class="sm3">本溯源页数据指纹经国密 <b>SM3</b> 哈希校验，全程 <b>SM2/SM4</b> 加密存证<br/>天鉴数链 · 本草兴乡 · 道地药材普惠溯源</p>
+    <p class="sm3">本溯源页数据指纹经国密 <b>SM3</b> 哈希校验，全程 <b>SM2/SM4</b> 加密存证<br/>天鉴数链 · 道地药材普惠溯源</p>
     <div class="divider"></div>
     <p class="copyright">© 2026 天鉴数链 · Tianjian Data Chain</p>
   </footer>
@@ -331,7 +331,7 @@ var TRACE_DATA = {
     "block_height": 2187346,
     "on_chain_time": "2026-04-22 10:32:18"
   },
-  "scan_count": 128
+  "scan_count": 0
 };
 
 /* ===== 工具：复制到剪贴板 ===== */
@@ -363,8 +363,38 @@ function fmtTime(d){
 }
 document.getElementById('verifyTime').textContent = fmtTime(new Date());
 
-/* ===== 扫码次数 / 哈希 / 报告 ===== */
-document.getElementById('scanCount').textContent = TRACE_DATA.scan_count;
+/* ===== 扫码次数：动态从 API 获取并累加（初始为0，禁止硬编码） ===== */
+async function initScanCount(){
+  var el = document.getElementById('scanCount');
+  try {
+    var resp = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!resp.ok) throw new Error('API error: ' + resp.status);
+    var result = await resp.json();
+    if (result && typeof result.scan_count === 'number') {
+      el.textContent = result.scan_count;
+      return;
+    }
+    throw new Error('Invalid response');
+  } catch (e) {
+    try {
+      var getResp = await fetch('/api/scan');
+      if (getResp.ok) {
+        var getResult = await getResp.json();
+        if (getResult && typeof getResult.scan_count === 'number') {
+          var next = getResult.scan_count + 1;
+          el.textContent = next;
+          return;
+        }
+      }
+    } catch (e2) {}
+    el.textContent = '0';
+  }
+}
+initScanCount();
+
 document.getElementById('sm3Hash').textContent = TRACE_DATA.chain.sm3_hash;
 document.getElementById('txHash').textContent = TRACE_DATA.chain.tx_hash;
 document.getElementById('chainTime').textContent = TRACE_DATA.chain.on_chain_time + ' · #' + TRACE_DATA.chain.block_height;
@@ -457,7 +487,7 @@ document.getElementById('chainCheckBtn').addEventListener('click', function(){ d
 /* ===== 动态防伪水印（扫码时间 + 批次号） ===== */
 (function(){
   var wm = document.getElementById('watermark');
-  var txt = '天鉴数链 · 批次 '+TRACE_DATA.batch_id+' · 验证时间 '+fmtTime(new Date());
+  var txt = '天鉴数链'+TRACE_DATA.batch_id+' · 验证时间 '+fmtTime(new Date());
   var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='340' height='90'>"
     + "<text x='0' y='30' font-family='sans-serif' font-size='13' fill='%230b6e4f' transform='rotate(-24 24 24)'>"+txt+"</text></svg>";
   wm.style.backgroundImage = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";

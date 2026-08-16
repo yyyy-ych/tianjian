@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-天鉴数链 · 演示二维码生成脚本
+天鉴数链 演示二维码生成脚本
 用法：
-    python generate_qr.py "https://你的真实链接/verify?batch=DEMO-001"
-不带参数时使用占位生产域名 demo.tianjian.cn。
-生成 300dpi、25mm、纠错级别 M、白底、中央含平台印章 Logo 的 PNG。
+    python generate_qr.py "https://你的真实链接"
+    python generate_qr.py --reset-only          # 仅重置扫码计数（不生成二维码）
+    python generate_qr.py --reset-url <URL>    # 重置时同步远程 Vercel KV 计数
+不带参数默认使用域名 https://www.tianjianshulian.xyz/
+生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
+同时自动将 data.json 中的 scan_count 扫码计数重置为 0。
 依赖：pip install qrcode[pil]
 """
 import sys
 import os
+import json
+import urllib.request
 
 try:
     import qrcode
-    from qrcode.constants import ERROR_CORRECT_M
+    from qrcode.constants import ERROR_CORRECT_H
     from PIL import Image, ImageDraw, ImageFont
 except ImportError:
     print("缺少依赖，请先执行：pip install qrcode[pil]")
     sys.exit(1)
 
-DEFAULT_URL = "https://demo.tianjian.cn/verify?batch=DEMO-001"
+DEFAULT_URL = "https://www.tianjianshulian.xyz/"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qrcode-demo.png")
+DATA_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
 # 目标尺寸：25mm @ 300dpi ≈ 295px
 MM = 25
@@ -45,7 +51,7 @@ def find_cjk_font():
 
 def make_logo(px):
     """绘制中央印章 Logo：深绿圆 + 金色双环 + 「鉴」字。"""
-    size = int(px * 0.24)  # 占二维码约 24% 的中央 logo
+    size = int(px * 0.18)  # 占二维码约 18% 的中央 logo
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     pad = size * 0.06
@@ -73,31 +79,84 @@ def make_logo(px):
     return img
 
 
+def reset_scan_count(remote_url=None):
+    """将 data.json 中的 scan_count 重置为 0，并可选同步远程 Vercel KV。"""
+    if not os.path.exists(DATA_JSON):
+        print("[警告] data.json 不存在，跳过扫码计数重置")
+        return False
+    old = 0
+    try:
+        with open(DATA_JSON, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        old = data.get("scan_count", 0)
+        data["scan_count"] = 0
+        with open(DATA_JSON, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"[重置] data.json 扫码计数已从 {old} 重置为 0")
+    except Exception as e:
+        print(f"[错误] 重置 data.json 扫码计数失败：{e}")
+        return False
+
+    if remote_url:
+        try:
+            url = remote_url.rstrip("/")
+            req = urllib.request.Request(
+                url,
+                data=json.dumps({"reset": True}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+                print(f"[远程] Vercel KV 扫码计数已从 {body.get('previous')} 重置为 0")
+        except Exception as e:
+            print(f"[警告] 远程重置失败（不影响本地）：{e}")
+
+    return True
+
+
+def parse_args():
+    """解析命令行参数，返回 (url, reset_only, remote_url)。"""
+    args = sys.argv[1:]
+    url = None
+    reset_only = False
+    remote_url = None
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--reset-only":
+            reset_only = True
+        elif a == "--reset-url" and i + 1 < len(args):
+            remote_url = args[i + 1]
+            i += 1
+        elif not a.startswith("--"):
+            url = a
+        i += 1
+    return url, reset_only, remote_url
+
+
 def main():
-    url = sys.argv[1].strip() if len(sys.argv) > 1 else DEFAULT_URL
-    print("二维码内容：", url)
+    url, reset_only, remote_url = parse_args()
 
-    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_M, border=4, box_size=1)
-    qr.add_data(url)
+    reset_scan_count(remote_url)
+
+    if reset_only:
+        print("[完成] 扫码计数已重置，未生成二维码（--reset-only 模式）")
+        return
+
+    target_url = url if url else DEFAULT_URL
+    print("二维码内容：", target_url)
+
+    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
+    qr.add_data(target_url)
     qr.make(fit=True)
+    base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
 
-    modules = qr.modules_count
-    matrix = qr.get_matrix()
-
-    # 逐模块绘制，得到整像素级控制（后续可精确缩放）
-    base = Image.new("RGB", (modules, modules), "white")
-    px = base.load()
-    for y in range(modules):
-        for x in range(modules):
-            if matrix[y][x]:
-                px[x, y] = (0, 0, 0)
-
-    # 缩放到目标尺寸（最近邻，保持模块锐利）
+    # 缩放到目标尺寸
     base = base.resize((TARGET_PX, TARGET_PX), Image.NEAREST)
 
     # 叠加中央 Logo
     logo = make_logo(TARGET_PX)
-    base = base.convert("RGBA")
     pos = ((TARGET_PX - logo.size[0]) // 2, (TARGET_PX - logo.size[1]) // 2)
     base.paste(logo, pos, logo)
 
