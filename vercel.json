@@ -3,5 +3,11 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/scan.js": {
+      "includeFiles": "data.json",
+      "maxDuration": 5
+    }
+  }
 }
