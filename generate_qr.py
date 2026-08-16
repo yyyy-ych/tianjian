@@ -78,6 +78,7 @@ def make_logo(px):
 
 
 def reset_scan_count():
+    # 1. 重置本地 data.json
     if not os.path.exists(DATA_FILE):
         print("警告：data.json 不存在，跳过扫码次数重置")
         return
@@ -89,7 +90,18 @@ def reset_scan_count():
             json.dump(data, f, ensure_ascii=False, indent=2)
         print("已重置 data.json 扫码次数 → 0")
     except Exception as e:
-        print("重置扫码次数失败：", e)
+        print("重置本地扫码次数失败：", e)
+    
+    # 2. 重置云端计数（countapi.xyz）
+    try:
+        import urllib.request
+        url = "https://api.countapi.xyz/set/tianjianshulian/demo-001-scans?value=0"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            result = json.loads(resp.read().decode())
+            print("已重置云端扫码次数 →", result.get('value', '?'))
+    except Exception as e:
+        print("重置云端计数失败（不影响本地演示）：", e)
 
 
 def main():
