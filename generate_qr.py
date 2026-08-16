@@ -3,26 +3,17 @@
 天鉴数链 演示二维码生成脚本
 用法：
     python generate_qr.py "https://你的真实链接"
-<<<<<<< HEAD
-不带参数默认使用域名 https://www.tianjianshulian.xyz/
-生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
-每次生成新二维码的同时，自动将 data.json 中的扫码访问次数重置归零。
-=======
     python generate_qr.py --reset-only          # 仅重置扫码计数（不生成二维码）
     python generate_qr.py --reset-url <URL>    # 重置时同步远程 Vercel KV 计数
 不带参数默认使用域名 https://www.tianjianshulian.xyz/
 生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
 同时自动将 data.json 中的 scan_count 扫码计数重置为 0。
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 依赖：pip install qrcode[pil]
 """
 import sys
 import os
 import json
-<<<<<<< HEAD
-=======
 import urllib.request
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 
 try:
     import qrcode
@@ -33,14 +24,9 @@ except ImportError:
     sys.exit(1)
 
 DEFAULT_URL = "https://www.tianjianshulian.xyz/"
-<<<<<<< HEAD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE_DIR, "qrcode-demo.png")
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
-=======
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qrcode-demo.png")
-DATA_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 
 # 目标尺寸：25mm @ 300dpi ≈ 295px
 MM = 25
@@ -94,45 +80,18 @@ def make_logo(px):
     return img
 
 
-<<<<<<< HEAD
-def reset_scan_count():
-    # 1. 重置本地 data.json
-    if not os.path.exists(DATA_FILE):
-        print("警告：data.json 不存在，跳过扫码次数重置")
-        return
-    try:
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        data['scan_count'] = 0
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        print("已重置 data.json 扫码次数 → 0")
-    except Exception as e:
-        print("重置本地扫码次数失败：", e)
-    
-    # 2. 重置云端计数（countapi.xyz）
-    try:
-        import urllib.request
-        url = "https://api.countapi.xyz/set/tianjianshulian/demo-001-scans?value=0"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            result = json.loads(resp.read().decode())
-            print("已重置云端扫码次数 →", result.get('value', '?'))
-    except Exception as e:
-        print("重置云端计数失败（不影响本地演示）：", e)
-=======
 def reset_scan_count(remote_url=None):
     """将 data.json 中的 scan_count 重置为 0，并可选同步远程 Vercel KV。"""
-    if not os.path.exists(DATA_JSON):
+    if not os.path.exists(DATA_FILE):
         print("[警告] data.json 不存在，跳过扫码计数重置")
         return False
     old = 0
     try:
-        with open(DATA_JSON, "r", encoding="utf-8") as f:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         old = data.get("scan_count", 0)
         data["scan_count"] = 0
-        with open(DATA_JSON, "w", encoding="utf-8") as f:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"[重置] data.json 扫码计数已从 {old} 重置为 0")
     except Exception as e:
@@ -153,6 +112,15 @@ def reset_scan_count(remote_url=None):
                 print(f"[远程] Vercel KV 扫码计数已从 {body.get('previous')} 重置为 0")
         except Exception as e:
             print(f"[警告] 远程重置失败（不影响本地）：{e}")
+
+    try:
+        url = "https://api.countapi.xyz/set/tianjianshulian/demo-001-scans?value=0"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            result = json.loads(resp.read().decode())
+            print(f"[云端] countapi.xyz 扫码计数已重置为 {result.get('value', '?')}")
+    except Exception as e:
+        print(f"[警告] countapi.xyz 重置失败（不影响本地）：{e}")
 
     return True
 
@@ -175,21 +143,11 @@ def parse_args():
             url = a
         i += 1
     return url, reset_only, remote_url
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 
 
 def main():
     url, reset_only, remote_url = parse_args()
 
-<<<<<<< HEAD
-    reset_scan_count()
-
-    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
-    qr.add_data(url)
-    qr.make(fit=True)
-    base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
-
-=======
     reset_scan_count(remote_url)
 
     if reset_only:
@@ -204,8 +162,6 @@ def main():
     qr.make(fit=True)
     base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
 
-    # 缩放到目标尺寸
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
     base = base.resize((TARGET_PX, TARGET_PX), Image.NEAREST)
 
     logo = make_logo(TARGET_PX)

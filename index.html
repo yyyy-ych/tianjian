@@ -535,55 +535,8 @@ footer .divider{
 </div>
 
 <script>
-<<<<<<< HEAD
 /* ===== 全局数据变量 ===== */
 var TRACE_DATA = null;
-=======
-/* ===== mock 数据（内嵌，保证 file:// 直开；与 data.json 字段对齐 trace_detail_view） ===== */
-var TRACE_DATA = {
-  "batch_id": "DEMO-001",
-  "uuid": "018f3a2e-7b4c-4d1f-9c8e-2a6b5d3f0e17",
-  "herb": { "name": "铁皮石斛", "latin": "Dendrobium officinale", "dao_di_region": "浙江省温州市乐清市雁荡山", "dao_di_certified": true },
-  "farmer": { "name": "陈伟民", "cooperative": "铁枫堂雁荡山种植基地" },
-  "farmland": { "name": "雁荡山道地示范田", "area_mu": 196, "altitude": 480, "soil_type": "火山岩腐殖土" },
-  "plant_date": "2025-04-12",
-  "harvest_date": "2026-04-20",
-  "timeline": [
-    { "type": "播种", "date": "2025-04-12", "desc": "雁荡山原生种苗定植，GPS 地块确权编号 YDS-196" },
-    { "type": "施肥", "date": "2025-06-08", "desc": "施用腐熟羊粪有机肥，土壤 pH 6.2，NPK 均衡" },
-    { "type": "灌溉", "date": "2025-08-15", "desc": "山泉水滴灌，弱网 IoT 传感周期上报 13.1 万条" },
-    { "type": "采收", "date": "2026-04-20", "desc": "人工精选 2 年以上鲜条，含水率达标，分拣包装" },
-    { "type": "检测", "date": "2026-04-21", "desc": "送检温州市食品药品检验检测中心，国密 SM3 存证上链" }
-  ],
-  "env": {
-    "avg_temp": 21.6, "avg_humidity": 68, "total_light": 1580,
-    "series": [
-      { "t": 16.2, "h": 72 }, { "t": 17.8, "h": 70 }, { "t": 19.4, "h": 71 }, { "t": 21.0, "h": 69 },
-      { "t": 22.5, "h": 67 }, { "t": 23.8, "h": 66 }, { "t": 24.6, "h": 65 }, { "t": 24.0, "h": 67 },
-      { "t": 22.1, "h": 68 }, { "t": 20.3, "h": 70 }, { "t": 18.5, "h": 69 }, { "t": 17.1, "h": 68 }
-    ]
-  },
-  "quality": {
-    "agency": "温州市食品药品检验检测中心",
-    "standard": "《中国药典》2025 年版 · 一部",
-    "items": [
-      { "name": "浸出物", "result": "≥ 6.5%", "limit": "≥ 6.5%", "compliant": true },
-      { "name": "多糖含量", "result": "32.8%", "limit": "≥ 25.0%", "compliant": true },
-      { "name": "甘露糖", "result": "13.2%", "limit": "13.0% ~ 38.0%", "compliant": true },
-      { "name": "农药残留", "result": "未检出", "limit": "≤ 限量", "compliant": true },
-      { "name": "重金属", "result": "合格", "limit": "≤ 限量", "compliant": true }
-    ]
-  },
-  "chain": {
-    "chain_name": "长安链 ChainMaker",
-    "sm3_hash": "8a3f5c9d2e7b4a1f6c8d0e2f4a6b8c0d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b",
-    "tx_hash": "0x9c4f8e2a1b6d3c5f7e9a0b2d4c6e8f1a3b5d7f9e1a3c5b7d9f0e2a4c6b8d0e1",
-    "block_height": 2187346,
-    "on_chain_time": "2026-04-22 10:32:18"
-  },
-  "scan_count": 0
-};
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 
 /* ===== 工具函数 ===== */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -610,127 +563,7 @@ function copyText(val, btn){
     navigator.clipboard.writeText(val).then(done).catch(fallback);
   } else { fallback(); }
 }
-<<<<<<< HEAD
-=======
 
-/* ===== 动态验证时间（精确到秒） ===== */
-function pad(n){ return (n<10?'0':'')+n; }
-function fmtTime(d){
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '
-    + pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-}
-document.getElementById('verifyTime').textContent = fmtTime(new Date());
-
-/* ===== 扫码次数：动态从 API 获取并累加（初始为0，禁止硬编码） ===== */
-async function initScanCount(){
-  var el = document.getElementById('scanCount');
-  try {
-    var resp = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!resp.ok) throw new Error('API error: ' + resp.status);
-    var result = await resp.json();
-    if (result && typeof result.scan_count === 'number') {
-      el.textContent = result.scan_count;
-      return;
-    }
-    throw new Error('Invalid response');
-  } catch (e) {
-    try {
-      var getResp = await fetch('/api/scan');
-      if (getResp.ok) {
-        var getResult = await getResp.json();
-        if (getResult && typeof getResult.scan_count === 'number') {
-          var next = getResult.scan_count + 1;
-          el.textContent = next;
-          return;
-        }
-      }
-    } catch (e2) {}
-    el.textContent = '0';
-  }
-}
-initScanCount();
-
-document.getElementById('sm3Hash').textContent = TRACE_DATA.chain.sm3_hash;
-document.getElementById('txHash').textContent = TRACE_DATA.chain.tx_hash;
-document.getElementById('chainTime').textContent = TRACE_DATA.chain.on_chain_time + ' · #' + TRACE_DATA.chain.block_height;
-document.getElementById('qaAgency').textContent = TRACE_DATA.quality.agency;
-document.getElementById('qaStandard').textContent = TRACE_DATA.quality.standard;
-
-/* ===== 时间线渲染 ===== */
-(function(){
-  var ol = document.getElementById('timeline');
-  var html = '';
-  TRACE_DATA.timeline.forEach(function(node){
-    html += '<li><span class="dot"></span>'
-      + '<div class="t-row"><span class="t-name">'+node.type+'</span><span class="t-date">'+node.date+'</span></div>'
-      + '<div class="t-desc">'+node.desc+'</div></li>';
-  });
-  ol.innerHTML = html;
-})();
-
-/* ===== 品质检测表格渲染 ===== */
-(function(){
-  var tbody = document.getElementById('qaBody');
-  var html = '';
-  TRACE_DATA.quality.items.forEach(function(item){
-    html += '<tr><td>'+item.name+'</td><td>'+item.result+'</td><td>'+item.limit+'</td><td>'
-      + '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>合格</span></td></tr>';
-  });
-  tbody.innerHTML = html;
-})();
-
-/* ===== 环境数据：迷你折线（手写 SVG，零依赖） ===== */
-(function(){
-  var s = TRACE_DATA.env.series;
-  var W = 320, H = 128, L = 30, R = 10, T = 12, B = 20;
-  var xs = function(i){ return L + (W-L-R) * i / (s.length-1); };
-  var tMin = Math.min.apply(null, s.map(function(d){return d.t;})) - 1;
-  var tMax = Math.max.apply(null, s.map(function(d){return d.t;})) + 1;
-  var hMin = Math.min.apply(null, s.map(function(d){return d.h;})) - 2;
-  var hMax = Math.max.apply(null, s.map(function(d){return d.h;})) + 2;
-  var yT = function(v){ return T + (H-T-B) * (1 - (v-tMin)/(tMax-tMin)); };
-  var yH = function(v){ return T + (H-T-B) * (1 - (v-hMin)/(hMax-hMin)); };
-
-  var tPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yT(d.t).toFixed(1); }).join(' ');
-  var hPts = s.map(function(d,i){ return xs(i).toFixed(1)+','+yH(d.h).toFixed(1); }).join(' ');
-  var areaPts = L+','+ (H-B) + ' ' + tPts + ' ' + (W-R)+','+(H-B);
-
-  var grid = '';
-  for (var g = 0; g <= 3; g++){
-    var gy = T + (H-T-B) * g / 3;
-    grid += '<line x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'" stroke="#e7e2d4" stroke-width="1"/>';
-  }
-
-  var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="温湿度生长曲线">'
-    + grid
-    + '<polygon points="'+areaPts+'" fill="rgba(11,110,79,0.08)"/>'
-    + '<polyline points="'+tPts+'" fill="none" stroke="#0b6e4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '<polyline points="'+hPts+'" fill="none" stroke="#c9a227" stroke-width="1.6" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>';
-  s.forEach(function(d,i){
-    svg += '<circle cx="'+xs(i).toFixed(1)+'" cy="'+yT(d.t).toFixed(1)+'" r="2.2" fill="#0b6e4f"/>';
-  });
-  svg += '</svg>';
-  document.getElementById('envChart').innerHTML = svg;
-
-  document.getElementById('avgTemp').textContent = TRACE_DATA.env.avg_temp;
-  document.getElementById('avgHum').textContent = TRACE_DATA.env.avg_humidity;
-  document.getElementById('totalLight').textContent = TRACE_DATA.env.total_light;
-})();
-
-/* ===== 复制按钮 ===== */
-document.querySelectorAll('[data-copy]').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    var sel = btn.getAttribute('data-copy');
-    var el = document.querySelector(sel);
-    copyText(el ? el.textContent : '', btn);
-  });
-});
-
-/* ===== 报告 / 链上查验（演示版：轻提示） ===== */
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 function demoToast(msg){
   var t = document.createElement('div');
   t.textContent = msg;
@@ -920,20 +753,8 @@ document.querySelectorAll('[data-copy]').forEach(function(btn){
 document.getElementById('reportBtn').addEventListener('click', function(){ demoToast('完整版接入 PDF 报告后即可在线查看'); });
 document.getElementById('chainCheckBtn').addEventListener('click', function(){ demoToast('完整版接入长安链浏览器后即可链上查验'); });
 
-<<<<<<< HEAD
 /* ===== 启动 ===== */
 loadData();
-=======
-/* ===== 动态防伪水印（扫码时间 + 批次号） ===== */
-(function(){
-  var wm = document.getElementById('watermark');
-  var txt = '天鉴数链'+TRACE_DATA.batch_id+' · 验证时间 '+fmtTime(new Date());
-  var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='340' height='90'>"
-    + "<text x='0' y='30' font-family='sans-serif' font-size='13' fill='%230b6e4f' transform='rotate(-24 24 24)'>"+txt+"</text></svg>";
-  wm.style.backgroundImage = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";
-  wm.style.backgroundSize = "340px 90px";
-})();
->>>>>>> 4a94a6e68aa91a9392855d6cf4dc6488f587f731
 </script>
 </body>
 </html>
