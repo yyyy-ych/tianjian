@@ -13,8 +13,12 @@ try {
 const KV_KEY = 'scan_count';
 
 function readDataFile() {
-  const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-  return JSON.parse(raw);
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch (e) {
+    return { error: 'data.json read failed' };
+  }
 }
 
 function getCountFromFile() {
@@ -56,6 +60,12 @@ async function setCount(n) {
   writeCountToFile(n);
 }
 
+function buildResponse(count) {
+  const data = readDataFile();
+  data.scan_count = count;
+  return data;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -69,12 +79,8 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const count = await getCount();
-      const data = readDataFile();
-      res.status(200).json({
-        scan_count: count,
-        incremented: false,
-        ...data,
-      });
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json(buildResponse(count));
       return;
     }
 
@@ -82,21 +88,16 @@ export default async function handler(req, res) {
       const body = req.body || {};
 
       if (body.reset === true) {
-        const old = await getCount();
         await setCount(0);
-        const resetData = readDataFile();
-        resetData.scan_count = 0;
         res.setHeader('Cache-Control', 'no-store');
-        return res.status(200).json(resetData);
+        return res.status(200).json(buildResponse(0));
       }
 
       const current = await getCount();
       const next = current + 1;
       await setCount(next);
-      const responseData = readDataFile();
-      responseData.scan_count = next;
       res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(responseData);
+      return res.status(200).json(buildResponse(next));
     }
 
     res.status(405).json({ error: 'Method not allowed' });

@@ -1,32 +1,38 @@
-// api/data.js
-const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
 
-const NAMESPACE = 'tianjianshulian';
-const KEY = 'demo-001-scans';
+const DATA_FILE = path.join(__dirname, '..', 'data.json');
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   try {
-    // 读取当前计数（不增加）
-    const countRes = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${KEY}`);
-    const countData = await countRes.json();
-    
-    // 读取 data.json
-    const dataRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/data.json`);
-    const data = await dataRes.json();
-    
-    data.scan_count = countData.value || 0;
-    
-    res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    return res.status(200).json(data);
-  } catch (err) {
-    try {
-      const dataRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/data.json`);
-      const data = await dataRes.json();
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(data);
-    } catch (e) {
-      return res.status(500).json({ error: 'server error' });
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    const data = JSON.parse(raw);
+
+    let kv;
+    try { kv = require('@vercel/kv'); } catch (e) { kv = null; }
+
+    if (kv && kv.default) {
+      try {
+        const v = await kv.default.get('scan_count');
+        if (v !== null && v !== undefined) {
+          data.scan_count = parseInt(v, 10) || 0;
+        }
+      } catch (e) {}
     }
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error('[data.js] error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

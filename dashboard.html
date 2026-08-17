@@ -302,7 +302,7 @@ function renderBatches(){
   document.getElementById('batchBody').innerHTML = html;
 }
 
-/* ===== 从 /api/scan 读取全局扫码计数（服务端共享，不增加），回退 data.json ===== */
+/* ===== 从 /api/scan 读取全局扫码计数（仅服务端，前端只读渲染），回退 data.json ===== */
 function loadData(){
   renderBatches();
 
@@ -362,6 +362,11 @@ function startCountPolling(){
           }
         }
         renderBatches();
+        var d = new Date();
+        var clock = document.getElementById('clock');
+        if(clock){
+          clock.textContent = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+        }
       })
       .catch(function(){});
   }, 5000);

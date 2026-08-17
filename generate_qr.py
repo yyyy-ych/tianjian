@@ -4,9 +4,10 @@
 用法：
     python generate_qr.py "https://你的真实链接"
     python generate_qr.py --reset-only          # 仅重置扫码计数（不生成二维码）
+    python generate_qr.py --api-url https://xxx.vercel.app/api/scan  # 指定远程API地址
 不带参数默认使用域名 https://www.tianjianshulian.xyz/
 生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
-同时自动将 data.json 中的 scan_count 扫码计数重置为 0。
+同时自动调用服务端接口将全局扫码计数重置为 0。
 依赖：pip install qrcode[pil]
 """
 import sys
@@ -21,23 +22,27 @@ except ImportError:
     print("缺少依赖，请先执行：pip install qrcode[pil]")
     sys.exit(1)
 
+try:
+    import urllib.request
+    import urllib.error
+except ImportError:
+    urllib = None
+
 DEFAULT_URL = "https://www.tianjianshulian.xyz/"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE_DIR, "qrcode-demo.png")
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
 
-# 目标尺寸：25mm @ 300dpi ≈ 295px
 MM = 25
 DPI = 300
-TARGET_PX = int(round(MM / 25.4 * DPI))  # ~295
+TARGET_PX = int(round(MM / 25.4 * DPI))
 
 
 def find_cjk_font():
-    """在常见系统中寻找一个可渲染中文的字体文件。"""
     candidates = [
-        r"C:\Windows\Fonts\msyh.ttc",      # 微软雅黑
-        r"C:\Windows\Fonts\simsun.ttc",    # 宋体
-        r"C:\Windows\Fonts\simhei.ttf",    # 黑体
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\simsun.ttc",
+        r"C:\Windows\Fonts\simhei.ttf",
         "/System/Library/Fonts/PingFang.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
@@ -49,20 +54,15 @@ def find_cjk_font():
 
 
 def make_logo(px):
-    """绘制中央印章 Logo：深绿圆 + 金色双环 + 「鉴」字。"""
-    size = int(px * 0.18)  # 占二维码约 18% 的中央 logo
+    size = int(px * 0.18)
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     pad = size * 0.06
     c = (size - 2 * pad) / 2
     r = c
-    # 白底圆（隔离区，保证可扫）
     d.ellipse([pad, pad, size - pad, size - pad], fill=(255, 255, 255, 255))
-    # 深绿圆
     d.ellipse([pad * 1.9, pad * 1.9, size - pad * 1.9, size - pad * 1.9], fill=(19, 80, 59, 255))
-    # 金色双环
     d.ellipse([pad * 2.6, pad * 2.6, size - pad * 2.6, size - pad * 2.6], outline=(201, 162, 39, 255), width=max(1, int(size * 0.02)))
-    # 「鉴」字
     font_path = find_cjk_font()
     if font_path:
         try:
@@ -79,31 +79,50 @@ def make_logo(px):
 
 
 def reset_scan_count(remote_url=None):
-    """将 data.json 中的 scan_count 重置为 0，静态项目移除远程Vercel API调用。"""
-    if not os.path.exists(DATA_FILE):
-        print("[警告] data.json 不存在，跳过扫码计数重置")
-        return False
-    old = 0
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        old = data.get("scan_count", 0)
-        data["scan_count"] = 0
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        print(f"[重置] data.json 扫码计数已从 {old} 重置为 0")
-    except Exception as e:
-        print(f"[错误] 重置 data.json 扫码计数失败：{e}")
-        return False
+    """重置本地 data.json 扫码计数，并调用远程 Vercel API 重置全局计数。"""
+    if os.path.exists(DATA_FILE):
+        old = 0
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            old = data.get("scan_count", 0)
+            data["scan_count"] = 0
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"[本地重置] data.json 扫码计数已从 {old} 重置为 0")
+        except Exception as e:
+            print(f"[错误] 重置 data.json 扫码计数失败：{e}")
+    else:
+        print("[警告] data.json 不存在，跳过本地扫码计数重置")
 
-    # 静态网页没有后端接口，删除远程Vercel API请求代码，不再访问云端
-    if remote_url is not None:
-        print("[提示] 当前为静态项目，不支持远程云端重置，仅完成本地data.json重置")
+    if remote_url:
+        if urllib is None:
+            print("[错误] urllib 不可用，无法调用远程 API")
+            return False
+        try:
+            payload = json.dumps({"reset": True}).encode("utf-8")
+            req = urllib.request.Request(
+                remote_url,
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-store",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                new_count = result.get("scan_count", "N/A")
+                print(f"[远程重置] Vercel API 调用成功，当前扫码计数: {new_count}")
+        except urllib.error.URLError as e:
+            print(f"[远程重置] Vercel API 调用失败: {e}")
+        except Exception as e:
+            print(f"[远程重置] Vercel API 调用异常: {e}")
+
     return True
 
 
 def parse_args():
-    """解析命令行参数，返回 (url, reset_only, remote_url)。"""
     args = sys.argv[1:]
     url = None
     reset_only = False
@@ -113,7 +132,7 @@ def parse_args():
         a = args[i]
         if a == "--reset-only":
             reset_only = True
-        elif a == "--reset-url" and i + 1 < len(args):
+        elif a == "--api-url" and i + 1 < len(args):
             remote_url = args[i + 1]
             i += 1
         elif not a.startswith("--"):
@@ -124,6 +143,11 @@ def parse_args():
 
 def main():
     url, reset_only, remote_url = parse_args()
+
+    if remote_url is None:
+        env_url = os.environ.get("API_RESET_URL")
+        if env_url:
+            remote_url = env_url
 
     reset_scan_count(remote_url)
 

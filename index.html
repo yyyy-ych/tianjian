@@ -649,7 +649,7 @@ function renderAll(data){
   })();
 }
 
-/* ===== 加载数据 + 全局扫码计数（Vercel /api/scan 云端共享，服务端自增） ===== */
+/* ===== 加载数据 + 全局扫码计数（仅服务端自增，前端只读渲染） ===== */
 function loadData(){
   fetch('/api/scan', {
     method: 'POST',
@@ -673,10 +673,6 @@ function loadData(){
           return res.json();
         })
         .then(function(data){
-          var local = parseInt(localStorage.getItem('local_scan') || '0', 10);
-          local += 1;
-          localStorage.setItem('local_scan', String(local));
-          data.scan_count = (data.scan_count || 0) + local;
           try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
           renderAll(data);
           startCountPolling();
@@ -685,10 +681,6 @@ function loadData(){
           var cached = null;
           try { cached = JSON.parse(localStorage.getItem('trace_data_cache') || 'null'); } catch(e){}
           if(cached && typeof cached.scan_count === 'number'){
-            var local2 = parseInt(localStorage.getItem('local_scan') || '0', 10);
-            local2 += 1;
-            localStorage.setItem('local_scan', String(local2));
-            cached.scan_count = (cached.scan_count || 0) + local2;
             renderAll(cached);
             startCountPolling();
           } else {
@@ -732,10 +724,6 @@ function loadData(){
               },
               scan_count: 0
             };
-            var local3 = parseInt(localStorage.getItem('local_scan') || '0', 10);
-            local3 += 1;
-            localStorage.setItem('local_scan', String(local3));
-            fallback.scan_count = fallback.scan_count + local3;
             renderAll(fallback);
           }
         });
@@ -751,6 +739,8 @@ function startCountPolling(){
         if(el && typeof data.scan_count === 'number'){
           el.textContent = data.scan_count;
         }
+        var vt = document.getElementById('verifyTime');
+        if(vt){ vt.textContent = fmtTime(new Date()); }
       })
       .catch(function(){});
   }, 5000);

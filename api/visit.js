@@ -1,36 +1,62 @@
-// api/visit.js
-const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
 
-const NAMESPACE = 'tianjianshulian';
-const KEY = 'demo-001-scans';
+const DATA_FILE = path.join(__dirname, '..', 'data.json');
+
+let kv;
+try { kv = require('@vercel/kv'); } catch (e) { kv = null; }
+
+async function getCount() {
+  if (kv && kv.default) {
+    try {
+      const v = await kv.default.get('scan_count');
+      if (v !== null && v !== undefined) return parseInt(v, 10) || 0;
+    } catch (e) {}
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    return typeof data.scan_count === 'number' ? data.scan_count : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+async function setCount(n) {
+  if (kv && kv.default) {
+    try {
+      await kv.default.set('scan_count', String(n));
+    } catch (e) {}
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    data.scan_count = n;
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {}
+}
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   try {
-    // 调用 countapi.xyz 公共计数 API（免费、无需注册）
-    const hitRes = await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${KEY}`);
-    const hitData = await hitRes.json();
-    
-    // 读取 data.json 返回完整数据
-    const dataRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/data.json`);
-    const data = await dataRes.json();
-    
-    // 用云端计数覆盖本地 scan_count
-    data.scan_count = hitData.value;
-    
-    // 缓存控制
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    return res.status(200).json(data);
+    const current = await getCount();
+    const next = current + 1;
+    await setCount(next);
+
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    const data = JSON.parse(raw);
+    data.scan_count = next;
+
+    res.status(200).json(data);
   } catch (err) {
-    // 失败时回退：直接返回 data.json
-    try {
-      const dataRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/data.json`);
-      const data = await dataRes.json();
-      data.scan_count = (data.scan_count || 0) + 1;
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(data);
-    } catch (e) {
-      return res.status(500).json({ error: 'server error' });
-    }
+    console.error('[visit.js] error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
