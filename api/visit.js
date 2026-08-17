@@ -4,15 +4,25 @@ const path = require('path');
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
 
 let kv;
-try { kv = require('@vercel/kv'); } catch (e) { kv = null; }
+try {
+  const mod = require('@vercel/kv');
+  kv = mod.kv || mod.default || mod;
+} catch (e) {
+  kv = null;
+}
 
 async function getCount() {
-  if (kv && kv.default) {
+  if (kv && typeof kv.get === 'function') {
     try {
-      const v = await kv.default.get('scan_count');
+      const v = await kv.get('scan_count');
       if (v !== null && v !== undefined) return parseInt(v, 10) || 0;
     } catch (e) {}
   }
+  try {
+    const raw = fs.readFileSync('/tmp/scan_count.json', 'utf-8');
+    const n = parseInt(raw, 10);
+    if (!isNaN(n)) return n;
+  } catch (e) {}
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     return typeof data.scan_count === 'number' ? data.scan_count : 0;
@@ -22,11 +32,14 @@ async function getCount() {
 }
 
 async function setCount(n) {
-  if (kv && kv.default) {
+  if (kv && typeof kv.set === 'function') {
     try {
-      await kv.default.set('scan_count', String(n));
+      await kv.set('scan_count', String(n));
     } catch (e) {}
   }
+  try {
+    fs.writeFileSync('/tmp/scan_count.json', String(n), 'utf8');
+  } catch (e) {}
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     data.scan_count = n;
