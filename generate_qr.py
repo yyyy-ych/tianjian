@@ -29,6 +29,7 @@ except ImportError:
     urllib = None
 
 DEFAULT_URL = "https://www.tianjianshulian.xyz/"
+DEFAULT_API_URL = "https://www.tianjianshulian.xyz/api/scan"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE_DIR, "qrcode-demo.png")
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
@@ -148,6 +149,8 @@ def main():
         env_url = os.environ.get("API_RESET_URL")
         if env_url:
             remote_url = env_url
+        else:
+            remote_url = DEFAULT_API_URL
 
     reset_scan_count(remote_url)
 

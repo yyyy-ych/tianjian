@@ -4,105 +4,109 @@ const path = require('path');
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
 
 let kv;
-try {
-  kv = require('@vercel/kv');
-} catch (e) {
-  kv = null;
-}
+try { kv = require('@vercel/kv'); } catch (e) { kv = null; }
 
-const KV_KEY = 'scan_count';
-
-function readDataFile() {
+function readBaseData() {
   try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    data.scan_count = 0;
+    return data;
   } catch (e) {
-    return { error: 'data.json read failed' };
-  }
-}
-
-function getCountFromFile() {
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-    return typeof data.scan_count === 'number' ? data.scan_count : 0;
-  } catch (e) {
-    return 0;
-  }
-}
-
-function writeCountToFile(count) {
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-    data.scan_count = count;
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-    return true;
-  } catch (e) {
-    return false;
+    return null;
   }
 }
 
 async function getCount() {
   if (kv && kv.default) {
     try {
-      const v = await kv.default.get(KV_KEY);
+      const v = await kv.default.get('scan_count');
       if (v !== null && v !== undefined) return parseInt(v, 10) || 0;
     } catch (e) {}
   }
-  return getCountFromFile();
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    return typeof data.scan_count === 'number' ? data.scan_count : 0;
+  } catch (e) {
+    return 0;
+  }
 }
 
 async function setCount(n) {
   if (kv && kv.default) {
     try {
-      await kv.default.set(KV_KEY, String(n));
+      await kv.default.set('scan_count', String(n));
     } catch (e) {}
   }
-  writeCountToFile(n);
-}
-
-function buildResponse(count) {
-  const data = readDataFile();
-  data.scan_count = count;
-  return data;
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    data.scan_count = n;
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {}
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    res.statusCode = 204;
+    return res.end();
   }
 
   try {
+    const baseData = readBaseData();
+    if (!baseData) {
+      res.statusCode = 500;
+      return res.end(JSON.stringify({ error: 'failed to read data' }));
+    }
+
     if (req.method === 'GET') {
       const count = await getCount();
-      res.setHeader('Cache-Control', 'no-store');
-      res.status(200).json(buildResponse(count));
-      return;
+      baseData.scan_count = count;
+      res.statusCode = 200;
+      return res.end(JSON.stringify(baseData));
     }
 
     if (req.method === 'POST') {
-      const body = req.body || {};
+      let body = {};
+      try {
+        body = req.body ? (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) : {};
+      } catch (e) {
+        body = {};
+      }
 
       if (body.reset === true) {
         await setCount(0);
-        res.setHeader('Cache-Control', 'no-store');
-        return res.status(200).json(buildResponse(0));
+        baseData.scan_count = 0;
+        res.statusCode = 200;
+        return res.end(JSON.stringify(baseData));
+      }
+
+      if (body.increment === false) {
+        const count = await getCount();
+        baseData.scan_count = count;
+        res.statusCode = 200;
+        return res.end(JSON.stringify(baseData));
       }
 
       const current = await getCount();
       const next = current + 1;
       await setCount(next);
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(buildResponse(next));
-    }
+      baseData.scan_count = next;
 
-    res.status(405).json({ error: 'Method not allowed' });
+      res.statusCode = 200;
+      return res.end(JSON.stringify(baseData));
+    }
   } catch (err) {
     console.error('[scan.js] error:', err.message);
-    res.status(500).json({ error: 'Internal server error', detail: err.message });
+    res.statusCode = 500;
+    return res.end(JSON.stringify({ error: 'Internal server error' }));
   }
+
+  res.statusCode = 405;
+  res.end(JSON.stringify({ error: 'method not allowed' }));
 }

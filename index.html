@@ -733,7 +733,10 @@ function loadData(){
 function startCountPolling(){
   setInterval(function(){
     fetch('/api/scan', { cache: 'no-store' })
-      .then(function(res){ return res.json(); })
+      .then(function(res){
+        if(!res.ok) throw new Error('poll failed');
+        return res.json();
+      })
       .then(function(data){
         var el = document.getElementById('scanCount');
         if(el && typeof data.scan_count === 'number'){
@@ -741,6 +744,12 @@ function startCountPolling(){
         }
         var vt = document.getElementById('verifyTime');
         if(vt){ vt.textContent = fmtTime(new Date()); }
+        var saved = { scan_count: data.scan_count, batch_id: data.batch_id };
+        if(TRACE_DATA){
+          TRACE_DATA.scan_count = data.scan_count;
+          TRACE_DATA.batch_id = data.batch_id;
+        }
+        try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
       })
       .catch(function(){});
   }, 5000);

@@ -343,12 +343,16 @@ function applyData(data){
   if(metric){
     metric.innerHTML = scans.toLocaleString() + '<span class="u">次</span>';
   }
+  try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
 }
 
 function startCountPolling(){
   setInterval(function(){
     fetch('/api/scan', { cache: 'no-store' })
-      .then(function(res){ return res.json(); })
+      .then(function(res){
+        if(!res.ok) throw new Error('poll failed');
+        return res.json();
+      })
       .then(function(data){
         var scans = data.scan_count || 0;
         var metric = document.getElementById('metricScans');
@@ -362,14 +366,10 @@ function startCountPolling(){
           }
         }
         renderBatches();
-        var d = new Date();
-        var clock = document.getElementById('clock');
-        if(clock){
-          clock.textContent = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-        }
+        try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
       })
       .catch(function(){});
-  }, 5000);
+  }, 3000);
 }
 
 loadData();
