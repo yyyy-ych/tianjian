@@ -81,7 +81,7 @@ def make_logo(px):
 
 
 def reset_scan_count(remote_url=None):
-    """将 data.json 中的 scan_count 重置为 0，并可选同步远程 Vercel KV。"""
+    """将 data.json 中的 scan_count 重置为 0，并同步远程 Vercel /api/scan 全局计数。"""
     if not os.path.exists(DATA_FILE):
         print("[警告] data.json 不存在，跳过扫码计数重置")
         return False
@@ -98,29 +98,20 @@ def reset_scan_count(remote_url=None):
         print(f"[错误] 重置 data.json 扫码计数失败：{e}")
         return False
 
-    if remote_url:
-        try:
-            url = remote_url.rstrip("/")
-            req = urllib.request.Request(
-                url,
-                data=json.dumps({"reset": True}).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-                print(f"[远程] Vercel KV 扫码计数已从 {body.get('previous')} 重置为 0")
-        except Exception as e:
-            print(f"[警告] 远程重置失败（不影响本地）：{e}")
-
+    api_url = remote_url if remote_url else DEFAULT_VERCEL_API
     try:
-        url = "https://api.countapi.xyz/set/tianjianshulian/demo-001-scans?value=0"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            result = json.loads(resp.read().decode())
-            print(f"[云端] countapi.xyz 扫码计数已重置为 {result.get('value', '?')}")
+        req = urllib.request.Request(
+            api_url,
+            data=json.dumps({"reset": True}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+            prev = body.get("scan_count", "?")
+            print(f"[云端] Vercel /api/scan 全局扫码计数已重置为 0（原: {prev}）")
     except Exception as e:
-        print(f"[警告] countapi.xyz 重置失败（不影响本地）：{e}")
+        print(f"[警告] 远程 Vercel 重置失败（不影响本地）：{e}")
 
     return True
 

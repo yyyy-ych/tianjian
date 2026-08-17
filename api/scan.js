@@ -84,23 +84,19 @@ export default async function handler(req, res) {
       if (body.reset === true) {
         const old = await getCount();
         await setCount(0);
-        res.status(200).json({
-          scan_count: 0,
-          previous: old,
-          reset: true,
-        });
-        return;
+        const resetData = readDataFile();
+        resetData.scan_count = 0;
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).json(resetData);
       }
 
       const current = await getCount();
       const next = current + 1;
       await setCount(next);
-      res.status(200).json({
-        scan_count: next,
-        previous: current,
-        incremented: true,
-      });
-      return;
+      const responseData = readDataFile();
+      responseData.scan_count = next;
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).json(responseData);
     }
 
     res.status(405).json({ error: 'Method not allowed' });

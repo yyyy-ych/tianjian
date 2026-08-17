@@ -302,23 +302,23 @@ function renderBatches(){
   document.getElementById('batchBody').innerHTML = html;
 }
 
-/* ===== 从 API 读取扫码统计，回退静态 data.json（Vercel 兼容） ===== */
+/* ===== 从 /api/scan 读取全局扫码计数（服务端共享，不增加），回退 data.json ===== */
 function loadData(){
   renderBatches();
 
-  fetch('/api/data', { cache: 'no-store' })
+  fetch('/api/scan', { cache: 'no-store' })
     .then(function(res){
       if(!res.ok) throw new Error('api error');
       return res.json();
     })
-    .then(function(data){ applyData(data); })
+    .then(function(data){ applyData(data); startCountPolling(); })
     .catch(function(){
       fetch('data.json', { cache: 'no-store' })
         .then(function(res){
           if(!res.ok) throw new Error('data.json not found');
           return res.json();
         })
-        .then(function(data){ applyData(data); })
+        .then(function(data){ applyData(data); startCountPolling(); })
         .catch(function(){
           try {
             var cached = JSON.parse(localStorage.getItem('trace_data_cache') || 'null');
@@ -343,6 +343,28 @@ function applyData(data){
   if(metric){
     metric.innerHTML = scans.toLocaleString() + '<span class="u">次</span>';
   }
+}
+
+function startCountPolling(){
+  setInterval(function(){
+    fetch('/api/scan', { cache: 'no-store' })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        var scans = data.scan_count || 0;
+        var metric = document.getElementById('metricScans');
+        if(metric){
+          metric.innerHTML = scans.toLocaleString() + '<span class="u">次</span>';
+        }
+        for(var i = 0; i < BATCHES.length; i++){
+          if(BATCHES[i].id === data.batch_id){
+            BATCHES[i].scans = scans;
+            break;
+          }
+        }
+        renderBatches();
+      })
+      .catch(function(){});
+  }, 5000);
 }
 
 loadData();

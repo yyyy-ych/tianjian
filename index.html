@@ -649,26 +649,14 @@ function renderAll(data){
   })();
 }
 
-/* ===== 加载数据：优先后端 API，回退静态 data.json + localStorage（Vercel 兼容） ===== */
-var LS_BASELINE = 'trace_scan_baseline';
-var LS_LOCAL   = 'local_scan_count';
-
-function applyCount(data){
-  var baseline = parseInt(data.scan_count, 10) || 0;
-  var saved = parseInt(localStorage.getItem(LS_BASELINE) || '0', 10);
-  if(baseline < saved){
-    localStorage.setItem(LS_LOCAL, '0');
-  }
-  localStorage.setItem(LS_BASELINE, baseline);
-  var local = parseInt(localStorage.getItem(LS_LOCAL) || '0', 10);
-  local += 1;
-  localStorage.setItem(LS_LOCAL, local);
-  data.scan_count = baseline + local;
-  return data;
-}
-
+/* ===== 加载数据 + 全局扫码计数（Vercel /api/scan 云端共享，服务端自增） ===== */
 function loadData(){
-  fetch('/api/visit', { cache: 'no-store' })
+  fetch('/api/scan', {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  })
     .then(function(res){
       if(!res.ok) throw new Error('api error');
       return res.json();
@@ -676,6 +664,7 @@ function loadData(){
     .then(function(data){
       try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
       renderAll(data);
+      startCountPolling();
     })
     .catch(function(){
       fetch('data.json', { cache: 'no-store' })
@@ -684,16 +673,24 @@ function loadData(){
           return res.json();
         })
         .then(function(data){
-          data = applyCount(data);
+          var local = parseInt(localStorage.getItem('local_scan') || '0', 10);
+          local += 1;
+          localStorage.setItem('local_scan', String(local));
+          data.scan_count = (data.scan_count || 0) + local;
           try { localStorage.setItem('trace_data_cache', JSON.stringify(data)); } catch(e){}
           renderAll(data);
+          startCountPolling();
         })
         .catch(function(){
           var cached = null;
           try { cached = JSON.parse(localStorage.getItem('trace_data_cache') || 'null'); } catch(e){}
           if(cached && typeof cached.scan_count === 'number'){
-            cached = applyCount(cached);
+            var local2 = parseInt(localStorage.getItem('local_scan') || '0', 10);
+            local2 += 1;
+            localStorage.setItem('local_scan', String(local2));
+            cached.scan_count = (cached.scan_count || 0) + local2;
             renderAll(cached);
+            startCountPolling();
           } else {
             var fallback = {
               batch_id: "DEMO-001",
@@ -735,11 +732,28 @@ function loadData(){
               },
               scan_count: 0
             };
-            fallback = applyCount(fallback);
+            var local3 = parseInt(localStorage.getItem('local_scan') || '0', 10);
+            local3 += 1;
+            localStorage.setItem('local_scan', String(local3));
+            fallback.scan_count = fallback.scan_count + local3;
             renderAll(fallback);
           }
         });
     });
+}
+
+function startCountPolling(){
+  setInterval(function(){
+    fetch('/api/scan', { cache: 'no-store' })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        var el = document.getElementById('scanCount');
+        if(el && typeof data.scan_count === 'number'){
+          el.textContent = data.scan_count;
+        }
+      })
+      .catch(function(){});
+  }, 5000);
 }
 
 /* ===== 事件绑定 ===== */
