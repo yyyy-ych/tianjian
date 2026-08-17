@@ -4,7 +4,6 @@
 用法：
     python generate_qr.py "https://你的真实链接"
     python generate_qr.py --reset-only          # 仅重置扫码计数（不生成二维码）
-    python generate_qr.py --reset-url <URL>    # 重置时同步远程 Vercel KV 计数
 不带参数默认使用域名 https://www.tianjianshulian.xyz/
 生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
 同时自动将 data.json 中的 scan_count 扫码计数重置为 0。
@@ -13,7 +12,6 @@
 import sys
 import os
 import json
-import urllib.request
 
 try:
     import qrcode
@@ -81,7 +79,7 @@ def make_logo(px):
 
 
 def reset_scan_count(remote_url=None):
-    """将 data.json 中的 scan_count 重置为 0，并同步远程 Vercel /api/scan 全局计数。"""
+    """将 data.json 中的 scan_count 重置为 0，静态项目移除远程Vercel API调用。"""
     if not os.path.exists(DATA_FILE):
         print("[警告] data.json 不存在，跳过扫码计数重置")
         return False
@@ -98,21 +96,9 @@ def reset_scan_count(remote_url=None):
         print(f"[错误] 重置 data.json 扫码计数失败：{e}")
         return False
 
-    api_url = remote_url if remote_url else DEFAULT_VERCEL_API
-    try:
-        req = urllib.request.Request(
-            api_url,
-            data=json.dumps({"reset": True}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-            prev = body.get("scan_count", "?")
-            print(f"[云端] Vercel /api/scan 全局扫码计数已重置为 0（原: {prev}）")
-    except Exception as e:
-        print(f"[警告] 远程 Vercel 重置失败（不影响本地）：{e}")
-
+    # 静态网页没有后端接口，删除远程Vercel API请求代码，不再访问云端
+    if remote_url is not None:
+        print("[提示] 当前为静态项目，不支持远程云端重置，仅完成本地data.json重置")
     return True
 
 
