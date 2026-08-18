@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+//【修改】Vercel /tmp目录，保留原有路径不变，仅修复读写容错
 const TMP_FILE = '/tmp/scan_count.json';
 
 var _memoryCount = null;
@@ -16,7 +17,7 @@ function loadBaseData() {
       var raw = fs.readFileSync(candidates[i], 'utf8');
       var obj = JSON.parse(raw);
       if (obj && typeof obj === 'object') {
-        obj.scan_count = 0;
+        //【修改】删除这里强制写死scan_count=0，这里不能覆盖真实计数
         return obj;
       }
     } catch (e) {}
@@ -68,15 +69,26 @@ function getCountSync() {
   try {
     var raw = fs.readFileSync(TMP_FILE, 'utf8');
     var n = parseInt(raw, 10);
-    if (!isNaN(n)) { _memoryCount = n; return n; }
-  } catch (e) {}
+    if (!isNaN(n)) {
+      _memoryCount = n;
+      return n;
+    }
+  } catch (e) {
+    //【修改】读取失败打印日志方便调试
+    console.log("[getCountSync] read tmp file error:", e.message);
+  }
   _memoryCount = 0;
   return 0;
 }
 
 function setCountSync(n) {
   _memoryCount = n;
-  try { fs.writeFileSync(TMP_FILE, String(n), 'utf8'); } catch (e) {}
+  try {
+    fs.writeFileSync(TMP_FILE, String(n), 'utf8');
+    console.log("[setCountSync] save count ->", n); //【修改】增加日志，看是否真正写入0
+  } catch (e) {
+    console.error("[setCountSync] write tmp file failed:", e.message);
+  }
 }
 
 module.exports = function handler(req, res) {
@@ -101,8 +113,10 @@ module.exports = function handler(req, res) {
     if (req.method === 'GET') {
       var resetParam = req.query && (req.query.reset === 'true' || req.query.reset === '1');
       if (resetParam) {
+        //【修改】reset=true时，强制置0，写入内存+临时文件
         setCountSync(0);
         baseData.scan_count = 0;
+        console.log("[API reset] reset trigger, scan_count set to 0");
         res.statusCode = 200;
         return res.end(JSON.stringify(baseData));
       }
@@ -116,11 +130,14 @@ module.exports = function handler(req, res) {
       var body = {};
       try {
         body = req.body ? (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) : {};
-      } catch (e) { body = {}; }
+      } catch (e) {
+        body = {};
+      }
 
       if (body.reset === true) {
         setCountSync(0);
         baseData.scan_count = 0;
+        console.log("[API POST reset] scan_count set to 0");
         res.statusCode = 200;
         return res.end(JSON.stringify(baseData));
       }

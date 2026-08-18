@@ -7,7 +7,7 @@
     python generate_qr.py --api-url https://xxx.vercel.app/api/scan  # 指定远程API地址
 不带参数默认使用域名 https://www.tianjianshulian.xyz/
 生成300dpi、25mm、高纠错等级H、白底，带中央印章Logo的PNG二维码。
-同时自动调用服务端接口将全局扫码计数重置为 0。
+【业务规则】执行生成二维码图片逻辑时，自动调用服务端接口将全局扫码计数重置为 0。
 依赖：pip install qrcode[pil]
 """
 import sys
@@ -63,7 +63,7 @@ def make_logo(px):
     r = c
     d.ellipse([pad, pad, size - pad, size - pad], fill=(255, 255, 255, 255))
     d.ellipse([pad * 1.9, pad * 1.9, size - pad * 1.9, size - pad * 1.9], fill=(19, 80, 59, 255))
-    d.ellipse([pad * 2.6, pad * 2.6, size - pad * 2.6, size - pad * 2.6], outline=(201, 162, 39, 255), width=max(1, int(size * 0.02)))
+    d.ellipse([pad * 2.6, pad * 2.6, size - pad * 2.6], outline=(201, 162, 39, 255), width=max(1, int(size * 0.02)))
     font_path = find_cjk_font()
     if font_path:
         try:
@@ -82,7 +82,7 @@ def make_logo(px):
 def _get_json(url, timeout=8):
     req = urllib.request.Request(
         url,
-        headers={"Cache-Control": "no-store"},
+        headers={"Cache-Control": "no-store", "Pragma":"no-cache"}, # ↓【修改】增加Pragma禁用缓存，防止Vercel返回旧缓存数据
         method="GET",
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -127,7 +127,7 @@ def reset_scan_count(remote_url=None):
                 if v == 0:
                     print(f"[远程验证] 确认 scan_count = 0，重置生效")
                 else:
-                    print(f"[远程验证] 警告：当前 scan_count = {v}，非预期")
+                    print(f"[远程验证] 警告：当前 scan_count = {v}，非预期！重点检查 api/scan.js 里面reset=true业务逻辑")
             except Exception:
                 pass
 
@@ -172,14 +172,17 @@ def main():
         else:
             remote_url = DEFAULT_API_URL
 
-    reset_scan_count(remote_url)
-
+    # ↓【修改：核心改动】原来这里无条件reset_scan_count()，移到分支内部
     if reset_only:
+        reset_scan_count(remote_url) # --reset-only模式直接重置
         print("[完成] 扫码计数已重置，未生成二维码（--reset-only 模式）")
         return
 
     target_url = url if url else DEFAULT_URL
     print("二维码内容：", target_url)
+
+    # ↓【修改】真正要生成二维码图片的时候才执行重置，删除png运行脚本走到这里就归零
+    reset_scan_count(remote_url)
 
     qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
     qr.add_data(target_url)
