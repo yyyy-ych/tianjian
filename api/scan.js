@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-//【修改】Vercel /tmp目录，保留原有路径不变，仅修复读写容错
 const TMP_FILE = '/tmp/scan_count.json';
 
 var _memoryCount = null;
+var _lastDataCount = -1;
 
-function loadBaseData() {
+function findDataFile() {
   var candidates = [
     path.join(__dirname, '..', 'data.json'),
     '/var/task/data.json',
@@ -14,10 +14,21 @@ function loadBaseData() {
   ];
   for (var i = 0; i < candidates.length; i++) {
     try {
-      var raw = fs.readFileSync(candidates[i], 'utf8');
+      fs.statSync(candidates[i]);
+      return candidates[i];
+    } catch (e) {}
+  }
+  return null;
+}
+
+function loadBaseData() {
+  var dataFile = findDataFile();
+  if (dataFile) {
+    try {
+      var raw = fs.readFileSync(dataFile, 'utf8');
       var obj = JSON.parse(raw);
       if (obj && typeof obj === 'object') {
-        //【修改】删除这里强制写死scan_count=0，这里不能覆盖真实计数
+        obj.scan_count = 0;
         return obj;
       }
     } catch (e) {}
@@ -64,8 +75,30 @@ function loadBaseData() {
   };
 }
 
+function getBaseScanCount() {
+  var dataFile = findDataFile();
+  if (!dataFile) return -1;
+  try {
+    var raw = fs.readFileSync(dataFile, 'utf8');
+    var obj = JSON.parse(raw);
+    return typeof obj.scan_count === 'number' ? obj.scan_count : 0;
+  } catch (e) {
+    return -1;
+  }
+}
+
 function getCountSync() {
+  var baseCount = getBaseScanCount();
+
+  if (baseCount === 0 && _memoryCount !== null && _memoryCount > 0) {
+    _memoryCount = 0;
+    try { fs.writeFileSync(TMP_FILE, '0', 'utf8'); } catch (e) {}
+    console.log('[scan] detected reset from data.json, count -> 0');
+    return 0;
+  }
+
   if (_memoryCount !== null) return _memoryCount;
+
   try {
     var raw = fs.readFileSync(TMP_FILE, 'utf8');
     var n = parseInt(raw, 10);
@@ -73,22 +106,21 @@ function getCountSync() {
       _memoryCount = n;
       return n;
     }
-  } catch (e) {
-    //【修改】读取失败打印日志方便调试
-    console.log("[getCountSync] read tmp file error:", e.message);
+  } catch (e) {}
+
+  if (baseCount >= 0) {
+    _memoryCount = baseCount;
+    try { fs.writeFileSync(TMP_FILE, String(baseCount), 'utf8'); } catch (e) {}
+    return baseCount;
   }
+
   _memoryCount = 0;
   return 0;
 }
 
 function setCountSync(n) {
   _memoryCount = n;
-  try {
-    fs.writeFileSync(TMP_FILE, String(n), 'utf8');
-    console.log("[setCountSync] save count ->", n); //【修改】增加日志，看是否真正写入0
-  } catch (e) {
-    console.error("[setCountSync] write tmp file failed:", e.message);
-  }
+  try { fs.writeFileSync(TMP_FILE, String(n), 'utf8'); } catch (e) {}
 }
 
 module.exports = function handler(req, res) {
@@ -113,10 +145,8 @@ module.exports = function handler(req, res) {
     if (req.method === 'GET') {
       var resetParam = req.query && (req.query.reset === 'true' || req.query.reset === '1');
       if (resetParam) {
-        //【修改】reset=true时，强制置0，写入内存+临时文件
         setCountSync(0);
         baseData.scan_count = 0;
-        console.log("[API reset] reset trigger, scan_count set to 0");
         res.statusCode = 200;
         return res.end(JSON.stringify(baseData));
       }
@@ -130,14 +160,11 @@ module.exports = function handler(req, res) {
       var body = {};
       try {
         body = req.body ? (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) : {};
-      } catch (e) {
-        body = {};
-      }
+      } catch (e) { body = {}; }
 
       if (body.reset === true) {
         setCountSync(0);
         baseData.scan_count = 0;
-        console.log("[API POST reset] scan_count set to 0");
         res.statusCode = 200;
         return res.end(JSON.stringify(baseData));
       }

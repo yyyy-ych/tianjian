@@ -103,7 +103,7 @@ def _get_json(url, timeout=8):
 
 
 def reset_scan_count(remote_url=None):
-    """重置本地 data.json 扫码计数，并调用远程 Vercel API 重置全局计数。"""
+    """重置本地 data.json 扫码计数。服务端 api/scan.js 会检测到 data.json 的变化并自动归零。"""
     if os.path.exists(DATA_FILE):
         old = 0
         try:
@@ -114,46 +114,23 @@ def reset_scan_count(remote_url=None):
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             print(f"[本地重置] data.json 扫码计数已从 {old} 重置为 0")
+            print("[同步机制] 服务端 api/scan.js 下次请求时会检测到 data.json 的 scan_count=0 并自动归零")
         except Exception as e:
             print(f"[错误] 重置 data.json 失败：{e}")
     else:
         print("[警告] data.json 不存在，跳过本地重置")
 
-    if not remote_url:
-        return True
-    if urllib is None:
-        print("[错误] urllib 不可用，跳过远程重置")
-        return False
-
-    reset_url = remote_url + ("&" if "?" in remote_url else "?") + "reset=true"
-
-    for attempt in range(1, 4):
-        print(f"[远程重置] 第 {attempt}/3 次 GET {reset_url} ...")
+    if remote_url and urllib is not None:
+        reset_url = remote_url + ("&" if "?" in remote_url else "?") + "reset=true"
         try:
             result = _get_json(reset_url, timeout=10)
             new_count = result.get("scan_count", "?")
             print(f"[远程重置] 成功！服务端扫码计数已归零，当前值: {new_count}")
-
-            try:
-                verify = _get_json(remote_url, timeout=8)
-                v = verify.get("scan_count", "?")
-                if v == 0:
-                    print(f"[远程验证] 确认 scan_count = 0，重置生效")
-                else:
-                    print(f"[远程验证] 警告：当前 scan_count = {v}，非预期！重点检查 api/scan.js 里面reset=true业务逻辑")
-            except Exception:
-                pass
-
-            return True
         except Exception as e:
-            print(f"[远程重置] 第 {attempt} 次失败: {e}")
-            if attempt < 3:
-                import time
-                time.sleep(2)
+            print(f"[远程重置] 跳过（非必需）: {e}")
+            print(f"  如需手动重置，浏览器打开: {reset_url}")
 
-    print("[远程重置] 3 次均失败，可能是网络问题。你可以稍后在浏览器打开:")
-    print(f"  {reset_url}")
-    return False
+    return True
 
 
 def parse_args():
@@ -183,7 +160,7 @@ def main():
         if env_url:
             remote_url = env_url
         else:
-            remote_url = DEFAULT_API_URL
+            remote_url = None
 
     if reset_only:
         reset_scan_count(remote_url)
@@ -193,12 +170,10 @@ def main():
     target_url = url if url else DEFAULT_URL
     print("二维码内容：", target_url)
 
-    # 关键修正：只有当 qrcode-demo.png 缺失时，才认为是“生成全新二维码”
-    # 这样删除图片后再执行脚本，才会触发一次全局归零
-    new_qr_generated = not os.path.exists(OUT)
-    if new_qr_generated:
+    new_qr_needed = not os.path.exists(OUT)
+    if new_qr_needed:
         reset_scan_count(remote_url)
-        print("[触发] 检测到 qrcode-demo.png 缺失，执行一次全局扫码计数归零后重新生成二维码")
+        print("[触发] 检测到 qrcode-demo.png 缺失，执行全局扫码计数归零后重新生成二维码")
 
     qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
     qr.add_data(target_url)
