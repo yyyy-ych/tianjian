@@ -1,48 +1,56 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_FILE = path.join(__dirname, '..', 'data.json');
+const TMP_FILE = '/tmp/scan_count.json';
 
-let kv;
-try {
-  const mod = require('@vercel/kv');
-  kv = mod.kv || mod.default || mod;
-} catch (e) {
-  kv = null;
+var _memoryCount = null;
+
+function loadBaseData() {
+  var candidates = [
+    path.join(__dirname, '..', 'data.json'),
+    '/var/task/data.json',
+    '/var/task/api/data.json',
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    try {
+      var raw = fs.readFileSync(candidates[i], 'utf8');
+      var obj = JSON.parse(raw);
+      if (obj && typeof obj === 'object') return obj;
+    } catch (e) {}
+  }
+  return { scan_count: 0 };
 }
 
-export default async function handler(req, res) {
+function getCountSync() {
+  if (_memoryCount !== null) return _memoryCount;
+  try {
+    var raw = fs.readFileSync(TMP_FILE, 'utf8');
+    var n = parseInt(raw, 10);
+    if (!isNaN(n)) { _memoryCount = n; return n; }
+  } catch (e) {}
+  _memoryCount = 0;
+  return 0;
+}
+
+module.exports = function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    res.statusCode = 204;
+    return res.end();
   }
 
   try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    const data = JSON.parse(raw);
-
-    if (kv && typeof kv.get === 'function') {
-      try {
-        const v = await kv.get('scan_count');
-        if (v !== null && v !== undefined) {
-          data.scan_count = parseInt(v, 10) || 0;
-        }
-      } catch (e) {}
-    }
-    try {
-      const tmp = fs.readFileSync('/tmp/scan_count.json', 'utf-8');
-      const n = parseInt(tmp, 10);
-      if (!isNaN(n)) data.scan_count = n;
-    } catch (e) {}
-
-    res.status(200).json(data);
+    var data = loadBaseData();
+    data.scan_count = getCountSync();
+    res.statusCode = 200;
+    return res.end(JSON.stringify(data));
   } catch (err) {
     console.error('[data.js] error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    res.statusCode = 500;
+    return res.end(JSON.stringify({ error: 'Internal server error' }));
   }
-}
+};
