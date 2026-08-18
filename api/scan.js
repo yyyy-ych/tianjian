@@ -99,6 +99,13 @@ module.exports = function handler(req, res) {
     }
 
     if (req.method === 'GET') {
+      var resetParam = req.query && (req.query.reset === 'true' || req.query.reset === '1');
+      if (resetParam) {
+        setCountSync(0);
+        baseData.scan_count = 0;
+        res.statusCode = 200;
+        return res.end(JSON.stringify(baseData));
+      }
       var cnt = getCountSync();
       baseData.scan_count = cnt;
       res.statusCode = 200;

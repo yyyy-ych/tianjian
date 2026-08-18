@@ -79,18 +79,6 @@ def make_logo(px):
     return img
 
 
-def _post_json(url, payload, timeout=8):
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json", "Cache-Control": "no-store"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
 def _get_json(url, timeout=8):
     req = urllib.request.Request(
         url,
@@ -124,10 +112,12 @@ def reset_scan_count(remote_url=None):
         print("[错误] urllib 不可用，跳过远程重置")
         return False
 
+    reset_url = remote_url + ("&" if "?" in remote_url else "?") + "reset=true"
+
     for attempt in range(1, 4):
-        print(f"[远程重置] 第 {attempt}/3 次调用 {remote_url} ...")
+        print(f"[远程重置] 第 {attempt}/3 次 GET {reset_url} ...")
         try:
-            result = _post_json(remote_url, {"reset": True}, timeout=8)
+            result = _get_json(reset_url, timeout=10)
             new_count = result.get("scan_count", "?")
             print(f"[远程重置] 成功！服务端扫码计数已归零，当前值: {new_count}")
 
@@ -148,8 +138,8 @@ def reset_scan_count(remote_url=None):
                 import time
                 time.sleep(2)
 
-    print("[远程重置] 3 次均失败，可能是网络问题。你可以稍后手动访问:")
-    print(f"  curl -X POST {remote_url} -H 'Content-Type: application/json' -d '{{\"reset\":true}}'")
+    print("[远程重置] 3 次均失败，可能是网络问题。你可以稍后在浏览器打开:")
+    print(f"  {reset_url}")
     return False
 
 
