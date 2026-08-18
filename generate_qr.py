@@ -79,6 +79,28 @@ def make_logo(px):
     return img
 
 
+def _post_json(url, payload, timeout=8):
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json", "Cache-Control": "no-store"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _get_json(url, timeout=8):
+    req = urllib.request.Request(
+        url,
+        headers={"Cache-Control": "no-store"},
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 def reset_scan_count(remote_url=None):
     """重置本地 data.json 扫码计数，并调用远程 Vercel API 重置全局计数。"""
     if os.path.exists(DATA_FILE):
@@ -92,35 +114,43 @@ def reset_scan_count(remote_url=None):
                 json.dump(data, f, ensure_ascii=False, indent=2)
             print(f"[本地重置] data.json 扫码计数已从 {old} 重置为 0")
         except Exception as e:
-            print(f"[错误] 重置 data.json 扫码计数失败：{e}")
+            print(f"[错误] 重置 data.json 失败：{e}")
     else:
-        print("[警告] data.json 不存在，跳过本地扫码计数重置")
+        print("[警告] data.json 不存在，跳过本地重置")
 
-    if remote_url:
-        if urllib is None:
-            print("[错误] urllib 不可用，无法调用远程 API")
-            return False
+    if not remote_url:
+        return True
+    if urllib is None:
+        print("[错误] urllib 不可用，跳过远程重置")
+        return False
+
+    for attempt in range(1, 4):
+        print(f"[远程重置] 第 {attempt}/3 次调用 {remote_url} ...")
         try:
-            payload = json.dumps({"reset": True}).encode("utf-8")
-            req = urllib.request.Request(
-                remote_url,
-                data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Cache-Control": "no-store",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                new_count = result.get("scan_count", "N/A")
-                print(f"[远程重置] Vercel API 调用成功，当前扫码计数: {new_count}")
-        except urllib.error.URLError as e:
-            print(f"[远程重置] Vercel API 调用失败: {e}")
-        except Exception as e:
-            print(f"[远程重置] Vercel API 调用异常: {e}")
+            result = _post_json(remote_url, {"reset": True}, timeout=8)
+            new_count = result.get("scan_count", "?")
+            print(f"[远程重置] 成功！服务端扫码计数已归零，当前值: {new_count}")
 
-    return True
+            try:
+                verify = _get_json(remote_url, timeout=8)
+                v = verify.get("scan_count", "?")
+                if v == 0:
+                    print(f"[远程验证] 确认 scan_count = 0，重置生效")
+                else:
+                    print(f"[远程验证] 警告：当前 scan_count = {v}，非预期")
+            except Exception:
+                pass
+
+            return True
+        except Exception as e:
+            print(f"[远程重置] 第 {attempt} 次失败: {e}")
+            if attempt < 3:
+                import time
+                time.sleep(2)
+
+    print("[远程重置] 3 次均失败，可能是网络问题。你可以稍后手动访问:")
+    print(f"  curl -X POST {remote_url} -H 'Content-Type: application/json' -d '{{\"reset\":true}}'")
+    return False
 
 
 def parse_args():
