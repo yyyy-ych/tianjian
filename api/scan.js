@@ -4,7 +4,7 @@ const path = require('path');
 const TMP_FILE = '/tmp/scan_count.json';
 
 var _memoryCount = null;
-var _lastDataCount = -1;
+var _lastQrGen = -1;
 
 function findDataFile() {
   var candidates = [
@@ -71,30 +71,35 @@ function loadBaseData() {
       tx_hash: "0x9c4f8e2a1b6d3c5f7e9a0b2d4c6e8f1a3b5d7f9e1a3c5b7d9f0e2a4c6b8d0e1",
       block_height: 2187346, on_chain_time: "2026-04-22 10:32:18"
     },
-    scan_count: 0
+    scan_count: 0,
+    qr_gen: 1
   };
 }
 
-function getBaseScanCount() {
+function getQrGen() {
   var dataFile = findDataFile();
   if (!dataFile) return -1;
   try {
     var raw = fs.readFileSync(dataFile, 'utf8');
     var obj = JSON.parse(raw);
-    return typeof obj.scan_count === 'number' ? obj.scan_count : 0;
+    return typeof obj.qr_gen === 'number' ? obj.qr_gen : 0;
   } catch (e) {
     return -1;
   }
 }
 
 function getCountSync() {
-  var baseCount = getBaseScanCount();
+  var qrGen = getQrGen();
 
-  if (baseCount === 0 && _memoryCount !== null && _memoryCount > 0) {
+  if (qrGen !== _lastQrGen && _lastQrGen !== -1) {
+    console.log('[scan] qr_gen changed: ' + _lastQrGen + ' -> ' + qrGen + ', resetting count to 0');
     _memoryCount = 0;
     try { fs.writeFileSync(TMP_FILE, '0', 'utf8'); } catch (e) {}
-    console.log('[scan] detected reset from data.json, count -> 0');
+    _lastQrGen = qrGen;
     return 0;
+  }
+  if (_lastQrGen === -1) {
+    _lastQrGen = qrGen;
   }
 
   if (_memoryCount !== null) return _memoryCount;
@@ -107,12 +112,6 @@ function getCountSync() {
       return n;
     }
   } catch (e) {}
-
-  if (baseCount >= 0) {
-    _memoryCount = baseCount;
-    try { fs.writeFileSync(TMP_FILE, String(baseCount), 'utf8'); } catch (e) {}
-    return baseCount;
-  }
 
   _memoryCount = 0;
   return 0;
@@ -180,7 +179,7 @@ module.exports = function handler(req, res) {
       var next = cur + 1;
       setCountSync(next);
       baseData.scan_count = next;
-      console.log('[scan] increment: ' + cur + ' -> ' + next);
+      console.log('[scan] increment: ' + cur + ' -> ' + next + ' (qr_gen=' + getQrGen() + ')');
 
       res.statusCode = 200;
       return res.end(JSON.stringify(baseData));

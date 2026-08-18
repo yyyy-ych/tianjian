@@ -103,20 +103,20 @@ def _get_json(url, timeout=8):
 
 
 def reset_scan_count(remote_url=None):
-    """重置本地 data.json 扫码计数。服务端 api/scan.js 会检测到 data.json 的变化并自动归零。"""
+    """递增 data.json 的 qr_gen 版本号，服务端 api/scan.js 检测到变化后自动归零计数。"""
     if os.path.exists(DATA_FILE):
-        old = 0
+        old_gen = 0
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            old = data.get("scan_count", 0)
-            data["scan_count"] = 0
+            old_gen = data.get("qr_gen", 0)
+            data["qr_gen"] = old_gen + 1
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            print(f"[本地重置] data.json 扫码计数已从 {old} 重置为 0")
-            print("[同步机制] 服务端 api/scan.js 下次请求时会检测到 data.json 的 scan_count=0 并自动归零")
+            print(f"[本地重置] qr_gen 版本号已从 {old_gen} 递增为 {data['qr_gen']}")
+            print("[同步机制] 服务端 api/scan.js 下次请求时会检测到 qr_gen 变化并自动将扫码计数归零")
         except Exception as e:
-            print(f"[错误] 重置 data.json 失败：{e}")
+            print(f"[错误] 更新 data.json 失败：{e}")
     else:
         print("[警告] data.json 不存在，跳过本地重置")
 
