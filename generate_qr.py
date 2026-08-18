@@ -59,11 +59,25 @@ def make_logo(px):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     pad = size * 0.06
-    c = (size - 2 * pad) / 2
-    r = c
-    d.ellipse([pad, pad, size - pad, size - pad], fill=(255, 255, 255, 255))
-    d.ellipse([pad * 1.9, pad * 1.9, size - pad * 1.9, size - pad * 1.9], fill=(19, 80, 59, 255))
-    d.ellipse([pad * 2.6, pad * 2.6, size - pad * 2.6], outline=(201, 162, 39, 255), width=max(1, int(size * 0.02)))
+    x1 = int(pad)
+    y1 = int(pad)
+    x2 = int(size - pad)
+    y2 = int(size - pad)
+    d.ellipse([x1, y1, x2, y2], fill=(255, 255, 255, 255))
+
+    x1 = int(pad * 1.9)
+    y1 = int(pad * 1.9)
+    x2 = int(size - pad * 1.9)
+    y2 = int(size - pad * 1.9)
+    d.ellipse([x1, y1, x2, y2], fill=(19, 80, 59, 255))
+
+    x1 = int(pad * 2.6)
+    y1 = int(pad * 2.6)
+    x2 = int(size - pad * 2.6)
+    y2 = int(size - pad * 2.6)
+    line_w = max(1, int(size * 0.02))
+    d.ellipse([x1, y1, x2, y2], outline=(201, 162, 39, 255), width=line_w)
+
     font_path = find_cjk_font()
     if font_path:
         try:
@@ -78,11 +92,10 @@ def make_logo(px):
     d.text((size / 2 - tw / 2 - bbox[0], size / 2 - th / 2 - bbox[1]), text, font=font, fill=(246, 244, 238, 255))
     return img
 
-
 def _get_json(url, timeout=8):
     req = urllib.request.Request(
         url,
-        headers={"Cache-Control": "no-store", "Pragma":"no-cache"}, # ↓【修改】增加Pragma禁用缓存，防止Vercel返回旧缓存数据
+        headers={"Cache-Control": "no-store", "Pragma":"no-cache"},
         method="GET",
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -172,17 +185,20 @@ def main():
         else:
             remote_url = DEFAULT_API_URL
 
-    # ↓【修改：核心改动】原来这里无条件reset_scan_count()，移到分支内部
     if reset_only:
-        reset_scan_count(remote_url) # --reset-only模式直接重置
+        reset_scan_count(remote_url)
         print("[完成] 扫码计数已重置，未生成二维码（--reset-only 模式）")
         return
 
     target_url = url if url else DEFAULT_URL
     print("二维码内容：", target_url)
 
-    # ↓【修改】真正要生成二维码图片的时候才执行重置，删除png运行脚本走到这里就归零
-    reset_scan_count(remote_url)
+    # 关键修正：只有当 qrcode-demo.png 缺失时，才认为是“生成全新二维码”
+    # 这样删除图片后再执行脚本，才会触发一次全局归零
+    new_qr_generated = not os.path.exists(OUT)
+    if new_qr_generated:
+        reset_scan_count(remote_url)
+        print("[触发] 检测到 qrcode-demo.png 缺失，执行一次全局扫码计数归零后重新生成二维码")
 
     qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, border=4, box_size=10)
     qr.add_data(target_url)
